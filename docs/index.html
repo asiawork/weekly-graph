@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top Funds Weekly Charts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1b3560; --navy-2: #24467d; --red: #d0273e;
+    --bg: #f4f6f9; --card: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --pos: #0f8a4b; --neg: #c62828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: "IBM Plex Sans Thai", system-ui, sans-serif; font-size: 15px; }
+  header { background: var(--navy); color: #fff; padding: 22px 16px 26px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header .wrap { padding: 0; display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: .2px; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
+  header .asof { background: rgba(255,255,255,.12); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px;
+          padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .chip:hover { border-color: var(--navy-2); }
+  .chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .chip .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--red); margin-left: 6px; vertical-align: middle; }
+
+  .card { background: var(--card); border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 18px; }
+  .head { display: flex; justify-content: space-between; align-items: start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .head h2 { margin: 0; font-size: 22px; color: var(--navy); }
+  .head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .actions { display: flex; gap: 8px; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--navy); }
+  .btn.primary { background: var(--navy); color: #fff; }
+  .btn.primary:hover { background: var(--navy-2); }
+  .btn.ghost { background: #fff; color: var(--navy); }
+  .btn.done { background: var(--pos); border-color: var(--pos); color: #fff; }
+
+  .chart { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+  .chart img { display: block; width: 100%; height: auto; }
+
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 14px; }
+  .kpi { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+  .kpi .k { color: var(--muted); font-size: 12px; }
+  .kpi .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--pos); } .neg { color: var(--neg); }
+
+  .notice { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 13px; background: #fff7e6; color: #7a4b00; border: 1px solid #f3d9a4; }
+  .notice ul { margin: 4px 0 0; padding-left: 18px; }
+
+  .tip { margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .tip b { color: var(--ink); }
+
+  h3 { margin: 28px 0 10px; font-size: 18px; color: var(--navy); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-variant-numeric: tabular-nums; }
+  th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--line); font-size: 14px; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { background: var(--navy); color: #fff; font-weight: 600; font-size: 13px; }
+  td small { color: var(--muted); }
+  footer { color: var(--muted); font-size: 12px; padding: 28px 0 40px; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
+           background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+
+  @media (max-width: 720px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    header h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1>Top Funds Weekly Charts</h1>
+      <p>กราฟ NAV สำหรับรายงาน Top Funds Weekly Market Recap · อัปเดตอัตโนมัติทุกวันจันทร์เช้า</p>
+    </div>
+    <div class="asof" id="asof">กำลังโหลด…</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="chips" id="chips" role="toolbar" aria-label="เลือกกองทุน"></div>
+
+  <section class="card" id="panel" hidden>
+    <div class="head">
+      <div>
+        <h2 id="title"></h2>
+        <div class="sub" id="sub"></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="copy">Copy รูป</button>
+        <a class="btn ghost" id="download" download>ดาวน์โหลด PNG</a>
+      </div>
+    </div>
+    <div class="chart"><img id="img" alt=""></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="notice" id="notice" hidden></div>
+    <div class="tip">วางใน PowerPoint ให้พอดีกรอบเดิม: <b>คลิกขวาที่รูปกราฟเก่า → Change Picture → From Clipboard</b> รูปใหม่จะเข้าไปแทนที่ขนาดและตำแหน่งเดิมทันที</div>
+  </section>
+
+  <h3>สรุปผลตอบแทน <button class="btn ghost" id="copyTable">Copy ตาราง</button></h3>
+  <div class="tbl-wrap card" style="padding:0">
+    <table id="tbl"></table>
+  </div>
+
+  <footer>ข้อมูล NAV จาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย · แก้รายชื่อกองได้ที่ไฟล์ funds.csv ใน repo</footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const COLS = [["1W","1W"],["1M","1M"],["3M","3M"],["6M","6M"],["1Y","1Y"],["since_rec","ตั้งแต่แนะนำ"]];
+let DATA = null, current = null;
+
+const fmt = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+const cls = (v) => v == null ? "" : v >= 0 ? "pos" : "neg";
+const thDate = (iso) => { if (!iso) return "–"; const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; };
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function select(name) {
+  const f = DATA.funds.find(x => x.name === name);
+  if (!f) return;
+  current = f;
+  document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.name === name));
+  try { history.replaceState(null, "", "#" + encodeURIComponent(name)); } catch (e) {}
+
+  $("panel").hidden = false;
+  $("title").textContent = f.name;
+  const peers = f.peers.length ? " · เทียบกับ " + f.peers.join(", ") : "";
+  $("sub").textContent = `แนะนำเมื่อ ${thDate(f.recommend_date)}` + peers;
+
+  if (f.image) {
+    const src = f.image + "?v=" + DATA.updated;
+    $("img").src = src; $("img").alt = "กราฟ NAV " + f.name;
+    $("download").href = src; $("download").setAttribute("download", f.name.replace(/[^A-Za-z0-9]+/g, "-") + ".png");
+    $("copy").disabled = false; $("img").parentElement.hidden = false;
+  } else {
+    $("img").parentElement.hidden = true; $("copy").disabled = true;
+  }
+
+  const r = f.returns || {};
+  $("kpis").innerHTML = COLS.map(([k, label]) =>
+    `<div class="kpi"><div class="k">${label}</div><div class="v ${cls(r[k])}">${fmt(r[k])}</div></div>`).join("");
+
+  const issues = [
+    ...Object.entries(f.missing || {}).map(([n, why]) => `${n}: ${why}`),
+    ...(f.warnings || []),
+  ];
+  $("notice").hidden = !issues.length;
+  $("notice").innerHTML = issues.length ? "ต้องเช็ค<ul>" + issues.map(x => `<li>${x}</li>`).join("") + "</ul>" : "";
+}
+
+async function copyImage() {
+  if (!current || !current.image) return;
+  const btn = $("copy");
+  try {
+    const blob = fetch(current.image + "?v=" + DATA.updated).then(r => r.blob())
+                  .then(b => b.type === "image/png" ? b : new Blob([b], { type: "image/png" }));
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    btn.textContent = "Copy แล้ว ✓"; btn.classList.add("done");
+    toast("Copy รูป " + current.name + " แล้ว ไปวางใน PowerPoint ได้เลย");
+    setTimeout(() => { btn.textContent = "Copy รูป"; btn.classList.remove("done"); }, 1800);
+  } catch (e) {
+    toast("เบราว์เซอร์นี้ copy รูปไม่ได้ ใช้ปุ่มดาวน์โหลด PNG แทน");
+  }
+}
+
+function renderTable() {
+  const head = "<tr><th>กองทุน</th><th>วันแนะนำ</th>" + COLS.map(c => `<th>${c[1]}</th>`).join("") + "<th>NAV ล่าสุด</th></tr>";
+  const rows = DATA.funds.map(f => {
+    const r = f.returns || {};
+    return `<tr><td><b>${f.name}</b></td><td>${thDate(f.recommend_date)}</td>` +
+      COLS.map(([k]) => `<td class="${cls(r[k])}">${fmt(r[k])}</td>`).join("") +
+      `<td>${r.nav != null ? r.nav.toFixed(4) : "–"} <small>${thDate(r.as_of)}</small></td></tr>`;
+  }).join("");
+  $("tbl").innerHTML = head + rows;
+}
+
+async function copyTable() {
+  const lines = [["กองทุน", "วันแนะนำ", ...COLS.map(c => c[1])].join("\t")];
+  DATA.funds.forEach(f => {
+    const r = f.returns || {};
+    lines.push([f.name, thDate(f.recommend_date), ...COLS.map(([k]) => fmt(r[k]))].join("\t"));
+  });
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    toast("Copy ตารางแล้ว วางใน PowerPoint / Excel ได้เลย");
+  } catch (e) { toast("copy ไม่สำเร็จ"); }
+}
+
+async function init() {
+  try {
+    const res = await fetch("data.json?t=" + Date.now());
+    DATA = await res.json();
+  } catch (e) {
+    $("asof").textContent = "ยังไม่มีข้อมูล – กด Run workflow ใน GitHub Actions";
+    return;
+  }
+  const asof = DATA.funds.map(f => f.returns && f.returns.as_of).filter(Boolean).sort().pop();
+  $("asof").textContent = `NAV ณ ${thDate(asof)} · อัปเดต ${thDate(DATA.updated)}`;
+
+  $("chips").innerHTML = DATA.funds.map(f => {
+    const warn = Object.keys(f.missing || {}).length || (f.warnings || []).length;
+    return `<button class="chip" data-name="${f.name}" aria-pressed="false">${f.name}${warn ? '<span class="dot" title="มีจุดต้องเช็ค"></span>' : ""}</button>`;
+  }).join("");
+  $("chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) select(b.dataset.name); });
+
+  renderTable();
+  const fromHash = decodeURIComponent(location.hash.slice(1));
+  select(DATA.funds.some(f => f.name === fromHash) ? fromHash : DATA.funds[0].name);
+}
+
+$("copy").addEventListener("click", copyImage);
+$("copyTable").addEventListener("click", copyTable);
+init();
+</script>
+</body>
+</html>

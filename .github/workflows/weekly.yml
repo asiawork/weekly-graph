@@ -1,0 +1,57 @@
+name: Weekly charts
+
+on:
+  schedule:
+    # ทุกวันจันทร์ 06:15 เวลาไทย (= อาทิตย์ 23:15 UTC)
+    - cron: "15 23 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "update = ดึงข้อมูล+สร้างกราฟ / selftest = พิมพ์ response จริงของ API ออกมาดู (ไม่บันทึก)"
+        type: choice
+        options: [update, selftest]
+        default: update
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-charts
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install requests pandas matplotlib
+
+      - name: Self-test SEC API
+        if: ${{ github.event.inputs.mode == 'selftest' }}
+        env:
+          SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+        run: python scripts/fetch_nav.py --selftest
+
+      - name: Fetch NAV from SEC
+        if: ${{ github.event.inputs.mode != 'selftest' }}
+        env:
+          SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+        run: python scripts/fetch_nav.py
+
+      - name: Build charts
+        if: ${{ github.event.inputs.mode != 'selftest' }}
+        run: python scripts/build_charts.py
+
+      - name: Commit
+        if: ${{ github.event.inputs.mode != 'selftest' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data docs
+          git diff --staged --quiet || (git commit -m "Weekly charts $(TZ=Asia/Bangkok date '+%Y-%m-%d')" && git push)
