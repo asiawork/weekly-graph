@@ -34,7 +34,7 @@ BASE = "https://api.sec.or.th/v2/fund"
 PROFILES_URL = f"{BASE}/general-info/profiles"
 NAV_URL = f"{BASE}/daily-info/nav"
 
-LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "550"))   # ~18 เดือน
+LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "1095"))  # 3 ปี
 CHUNK_DAYS = int(os.getenv("NAV_CHUNK_DAYS", "31"))       # ดึงทีละกี่วันต่อ 1 call
 REFETCH_DAYS = 10                                          # ดึงซ้ำย้อนหลังกันข้อมูลแก้ไขย้อนหลัง
 

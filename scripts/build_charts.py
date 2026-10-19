@@ -24,7 +24,7 @@ NAV_DIR = ROOT / "data" / "nav"
 OUT = ROOT / "docs"
 CHARTS = OUT / "charts"
 
-LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "550"))
+LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "1095"))   # 3 ปี
 WEEKLY = os.getenv("WEEKLY", "1") == "1"   # 1 = ใช้ NAV สิ้นสัปดาห์ (เหมือนกราฟเดิม)
 
 # ขนาดเท่ากรอบกราฟในรายงาน: 520 x 212 pt = 7.22 x 2.94 นิ้ว
@@ -119,12 +119,11 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
 
     ax.axhline(0, color="#9ca3af", lw=0.8, zorder=1)
 
-    # เว้นที่ว่างด้านบนให้ legend / ป้ายวันแนะนำ ไม่ทับเส้น
+    # เว้นที่ว่างด้านบนให้ป้ายวันแนะนำ ไม่ทับเส้น
     lo, hi = ax.get_ylim()
     lo, hi = min(lo, 0), max(hi, 0)
     rng = hi - lo or 1
-    n_leg = len(order)
-    ax.set_ylim(lo - rng * 0.03, hi + rng * (0.10 + 0.075 * n_leg))
+    ax.set_ylim(lo - rng * 0.04, hi + rng * 0.12)
 
     # เส้นวันแนะนำ
     if fund["rec"] and pd.Timestamp(fund["rec"]) >= start:
@@ -140,7 +139,7 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     # แกน
     ax.yaxis.tick_right()
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1, 13, 2)))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 4, 7, 10)))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
     ax.tick_params(colors=MUTED, length=0, labelsize=6.5)
     ax.grid(axis="y", color=GRID, lw=0.6)
@@ -151,16 +150,8 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     ax.spines["bottom"].set_color("#d1d5db")
     ax.margins(x=0.01)
 
-    leg = ax.legend(loc="upper left", frameon=False, fontsize=6.6, handlelength=1.6,
-                    borderaxespad=0.3, labelspacing=0.3)
-    for t in leg.get_texts():
-        t.set_color(INK)
 
-    as_of = max(s.index[-1] for s in series.values()).strftime("%d/%m/%Y")
-    fig.text(0.012, 0.02, f"% change from {start.strftime('%d/%m/%Y')} · NAV as of {as_of} · Source: SEC Open API",
-             fontsize=5.6, color=MUTED, ha="left", va="bottom")
-
-    fig.subplots_adjust(left=0.02, right=0.93, top=0.97, bottom=0.17)
+    fig.subplots_adjust(left=0.02, right=0.93, top=0.97, bottom=0.11)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=DPI, facecolor="white")
     plt.close(fig)
