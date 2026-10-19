@@ -150,6 +150,10 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     ax.spines["bottom"].set_color("#d1d5db")
     ax.margins(x=0.01)
 
+    # ชื่อกองมุมซ้ายบน
+    ax.text(0.012, 0.985, fund["name"], transform=ax.transAxes, ha="left", va="top",
+            fontsize=8.5, fontweight="bold", color=NAVY)
+
 
     fig.subplots_adjust(left=0.02, right=0.93, top=0.97, bottom=0.11)
     path.parent.mkdir(parents=True, exist_ok=True)
