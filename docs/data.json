@@ -14,7 +14,7 @@
     "proj_name_th": "กองทุนเปิดเคเคพี EXPANDED TECH - HEDGED",
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
     "name": "KKP TECH-H",
-    "days": 345,
+    "days": 680,
     "warning": null
    },
    "image": "charts/KKP-TECH-H.png",
@@ -32,14 +32,8 @@
   {
    "name": "K-SEMQ",
    "recommend_date": "2025-09-09",
-   "peers": [
-    "KT-EMEQ-A",
-    "SCBEMEQA",
-    "KF-EM"
-   ],
-   "missing": {
-    "LHEMK-A": "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
-   },
+   "peers": [],
+   "missing": {},
    "warnings": [],
    "info": {
     "proj_id": "M0066_2560",
@@ -48,7 +42,7 @@
     "proj_name_th": "กองทุนเปิดเค ซีเล็คทีฟ อีเมอร์จิ้ง มาร์เก็ตส์ หุ้นทุน",
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กสิกรไทย จำกัด",
     "name": "K-SEMQ",
-    "days": 345,
+    "days": 679,
     "warning": null
    },
    "image": "charts/K-SEMQ.png",
@@ -76,7 +70,7 @@
     "proj_name_th": "กองทุนเปิดไทยพาณิชย์โกลด์ THB เฮดจ์",
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
     "name": "SCBGOLDH",
-    "days": 362,
+    "days": 712,
     "warning": null
    },
    "image": "charts/SCBGOLDH.png",
@@ -94,13 +88,8 @@
   {
    "name": "ES-GTECH",
    "recommend_date": "2025-12-23",
-   "peers": [
-    "KFGTECH-A",
-    "KT-WTAI-A"
-   ],
-   "missing": {
-    "SCBGDIGI": "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
-   },
+   "peers": [],
+   "missing": {},
    "warnings": [],
    "info": {
     "proj_id": "M0692_2562",
@@ -109,7 +98,7 @@
     "proj_name_th": "กองทุนเปิดอีสท์สปริง Global Technology",
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน อีสท์สปริง (ประเทศไทย) จำกัด",
     "name": "ES-GTECH",
-    "days": 334,
+    "days": 657,
     "warning": null
    },
    "image": "charts/ES-GTECH.png",
@@ -137,7 +126,7 @@
     "proj_name_th": "กองทุนเปิดไทยพาณิชย์หุ้นญี่ปุ่น",
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
     "name": "SCBNK225",
-    "days": 362,
+    "days": 712,
     "warning": null
    },
    "image": "charts/SCBNK225.png",
@@ -155,11 +144,11 @@
   {
    "name": "KKP GHC-A",
    "recommend_date": "2025-11-11",
-   "peers": [
-    "KFHHCARE-A"
-   ],
+   "peers": [],
    "missing": {},
-   "warnings": [],
+   "warnings": [
+    "KKP GHC-A: API ตอบกลับมาแต่ไม่มี NAV ของ class นี้ (ลองรัน selftest ดู field)"
+   ],
    "info": {
     "proj_id": "M0109_2551",
     "proj_abbr_name": "KKP GHC FUND",
@@ -168,7 +157,7 @@
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
     "name": "KKP GHC-A",
     "days": 297,
-    "warning": null
+    "warning": "API ตอบกลับมาแต่ไม่มี NAV ของ class นี้ (ลองรัน selftest ดู field)"
    },
    "image": "charts/KKP-GHC-A.png",
    "returns": {
@@ -195,7 +184,7 @@
     "proj_name_th": "กองทุนเปิดเอ็มเอฟซี พร็อพเพอร์ตี้ ดิวิเดนด์ ฟันด์",
     "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เอ็มเอฟซี จำกัด (มหาชน)",
     "name": "MPDIVMF",
-    "days": 361,
+    "days": 710,
     "warning": null
    },
    "image": "charts/MPDIVMF.png",

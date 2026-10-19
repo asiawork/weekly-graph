@@ -1,5 +1,5 @@
 {
- "run_at": "2026-10-19T12:38:18.614436Z",
+ "run_at": "2026-10-19T12:51:17.898414Z",
  "funds": {
   "KKP TECH-H": {
    "proj_id": "M0471_2563",
@@ -8,7 +8,7 @@
    "proj_name_th": "กองทุนเปิดเคเคพี EXPANDED TECH - HEDGED",
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
    "name": "KKP TECH-H",
-   "days": 345,
+   "days": 680,
    "warning": null
   },
   "K-SEMQ": {
@@ -18,37 +18,7 @@
    "proj_name_th": "กองทุนเปิดเค ซีเล็คทีฟ อีเมอร์จิ้ง มาร์เก็ตส์ หุ้นทุน",
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กสิกรไทย จำกัด",
    "name": "K-SEMQ",
-   "days": 345,
-   "warning": null
-  },
-  "KT-EMEQ-A": {
-   "proj_id": "M0259_2562",
-   "proj_abbr_name": "KT-EMEQ",
-   "fund_class_name": "KT-EMEQ-A",
-   "proj_name_th": "กองทุนเปิดเคแทม อีเมอร์จิ้ง มาร์เก็ตส์ อิควิตี้ ฟันด์",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงไทย จำกัด (มหาชน)",
-   "name": "KT-EMEQ-A",
-   "days": 273,
-   "warning": null
-  },
-  "SCBEMEQA": {
-   "proj_id": "M0792_2555",
-   "proj_abbr_name": "SCBEMEQFUND",
-   "fund_class_name": "SCBEMEQA",
-   "proj_name_th": "กองทุนเปิดไทยพาณิชย์หุ้นยั่งยืนตลาดเกิดใหม่",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
-   "name": "SCBEMEQA",
-   "days": 360,
-   "warning": null
-  },
-  "KF-EM": {
-   "proj_id": "M0729_2555",
-   "proj_abbr_name": "KF-EM",
-   "fund_class_name": "",
-   "proj_name_th": "กองทุนเปิดกรุงศรีอีเมอร์จิ้งมาร์เก็ตส์อิควิตี้",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงศรี จำกัด",
-   "name": "KF-EM",
-   "days": 361,
+   "days": 679,
    "warning": null
   },
   "SCBGOLDH": {
@@ -58,7 +28,7 @@
    "proj_name_th": "กองทุนเปิดไทยพาณิชย์โกลด์ THB เฮดจ์",
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
    "name": "SCBGOLDH",
-   "days": 362,
+   "days": 712,
    "warning": null
   },
   "ES-GTECH": {
@@ -68,27 +38,7 @@
    "proj_name_th": "กองทุนเปิดอีสท์สปริง Global Technology",
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน อีสท์สปริง (ประเทศไทย) จำกัด",
    "name": "ES-GTECH",
-   "days": 334,
-   "warning": null
-  },
-  "KFGTECH-A": {
-   "proj_id": "M0693_2559",
-   "proj_abbr_name": "KFGTECH",
-   "fund_class_name": "KFGTECH-A",
-   "proj_name_th": "กองทุนเปิดกรุงศรีโกลบอลเทคโนโลยีอิควิตี้",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงศรี จำกัด",
-   "name": "KFGTECH-A",
-   "days": 361,
-   "warning": null
-  },
-  "KT-WTAI-A": {
-   "proj_id": "M0141_2561",
-   "proj_abbr_name": "KT-WTAI",
-   "fund_class_name": "KT-WTAI-A",
-   "proj_name_th": "กองทุนเปิดเคแทม เวิลด์ เทคโนโลยี อาร์ทิฟิเชียล อินเทลลิเจนซ์ อิควิตี้ ฟันด์",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงไทย จำกัด (มหาชน)",
-   "name": "KT-WTAI-A",
-   "days": 333,
+   "days": 657,
    "warning": null
   },
   "SCBNK225": {
@@ -98,7 +48,7 @@
    "proj_name_th": "กองทุนเปิดไทยพาณิชย์หุ้นญี่ปุ่น",
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
    "name": "SCBNK225",
-   "days": 362,
+   "days": 712,
    "warning": null
   },
   "KKP GHC-A": {
@@ -109,17 +59,7 @@
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
    "name": "KKP GHC-A",
    "days": 297,
-   "warning": null
-  },
-  "KFHHCARE-A": {
-   "proj_id": "M0473_2561",
-   "proj_abbr_name": "KFHHCARE",
-   "fund_class_name": "KFHHCARE-A",
-   "proj_name_th": "กองทุนเปิดกรุงศรีโกลบอลเฮลธ์แคร์อิควิตี้เฮดจ์เอฟเอ็กซ์",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงศรี จำกัด",
-   "name": "KFHHCARE-A",
-   "days": 361,
-   "warning": null
+   "warning": "API ตอบกลับมาแต่ไม่มี NAV ของ class นี้ (ลองรัน selftest ดู field)"
   },
   "MPDIVMF": {
    "proj_id": "M0517_2556",
@@ -128,12 +68,9 @@
    "proj_name_th": "กองทุนเปิดเอ็มเอฟซี พร็อพเพอร์ตี้ ดิวิเดนด์ ฟันด์",
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เอ็มเอฟซี จำกัด (มหาชน)",
    "name": "MPDIVMF",
-   "days": 361,
+   "days": 710,
    "warning": null
   }
  },
- "missing": {
-  "LHEMK-A": "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)",
-  "SCBGDIGI": "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
- }
+ "missing": {}
 }
