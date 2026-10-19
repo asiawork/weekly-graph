@@ -1,5 +1,5 @@
 {
- "run_at": "2026-10-19T14:37:46.895269Z",
+ "run_at": "2026-10-19T15:10:58.692213Z",
  "funds": {
   "KKP TECH-H": {
    "proj_id": "M0471_2563",
@@ -69,16 +69,6 @@
    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เอ็มเอฟซี จำกัด (มหาชน)",
    "name": "MPDIVMF",
    "days": 95,
-   "warning": null
-  },
-  "TLWORLD-X": {
-   "proj_id": "M0051_2569",
-   "proj_abbr_name": "TLWORLD-X",
-   "fund_class_name": "",
-   "proj_name_th": "กองทุนเปิดทาลิส WORLD STOCK",
-   "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ทาลิส จำกัด",
-   "name": "TLWORLD-X",
-   "days": 66,
    "warning": null
   }
  },

@@ -196,34 +196,6 @@
     "1Y": null,
     "since_rec": -5.2449865431841385
    }
-  },
-  {
-   "name": "TLWORLD-X",
-   "recommend_date": "2026-07-21",
-   "peers": [],
-   "missing": {},
-   "warnings": [],
-   "info": {
-    "proj_id": "M0051_2569",
-    "proj_abbr_name": "TLWORLD-X",
-    "fund_class_name": "",
-    "proj_name_th": "กองทุนเปิดทาลิส WORLD STOCK",
-    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ทาลิส จำกัด",
-    "name": "TLWORLD-X",
-    "days": 66,
-    "warning": null
-   },
-   "image": "charts/TLWORLD-X.png",
-   "returns": {
-    "as_of": "2026-10-14",
-    "nav": 11.5598,
-    "1W": -1.500524033095052,
-    "1M": 0.4894162646150946,
-    "3M": 0.2662827107059451,
-    "6M": null,
-    "1Y": null,
-    "since_rec": 0.9501353593572404
-   }
   }
  ]
 }
