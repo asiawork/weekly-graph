@@ -1,0 +1,214 @@
+{
+ "updated": "2026-10-19",
+ "funds": [
+  {
+   "name": "KKP TECH-H",
+   "recommend_date": "2026-08-11",
+   "peers": [],
+   "missing": {},
+   "warnings": [],
+   "info": {
+    "proj_id": "M0471_2563",
+    "proj_abbr_name": "KKP TECH-H FUND",
+    "fund_class_name": "KKP TECH-H",
+    "proj_name_th": "กองทุนเปิดเคเคพี EXPANDED TECH - HEDGED",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
+    "name": "KKP TECH-H",
+    "days": 345,
+    "warning": null
+   },
+   "image": "charts/KKP-TECH-H.png",
+   "returns": {
+    "as_of": "2026-10-14",
+    "nav": 26.9537,
+    "1W": -5.008317239240445,
+    "1M": 2.566668696155139,
+    "3M": 2.7292892642619693,
+    "6M": 26.562206528680356,
+    "1Y": 25.41913088795724,
+    "since_rec": 1.193126569779901
+   }
+  },
+  {
+   "name": "K-SEMQ",
+   "recommend_date": "2025-09-09",
+   "peers": [
+    "KT-EMEQ-A",
+    "SCBEMEQA",
+    "KF-EM"
+   ],
+   "missing": {
+    "LHEMK-A": "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
+   },
+   "warnings": [],
+   "info": {
+    "proj_id": "M0066_2560",
+    "proj_abbr_name": "K-SEMQ",
+    "fund_class_name": "",
+    "proj_name_th": "กองทุนเปิดเค ซีเล็คทีฟ อีเมอร์จิ้ง มาร์เก็ตส์ หุ้นทุน",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กสิกรไทย จำกัด",
+    "name": "K-SEMQ",
+    "days": 345,
+    "warning": null
+   },
+   "image": "charts/K-SEMQ.png",
+   "returns": {
+    "as_of": "2026-10-14",
+    "nav": 17.2556,
+    "1W": -5.570361452376382,
+    "1M": -3.3830166071288525,
+    "3M": -2.75193164975005,
+    "6M": 10.573836147512106,
+    "1Y": 29.849724205916228,
+    "since_rec": 34.823067967840494
+   }
+  },
+  {
+   "name": "SCBGOLDH",
+   "recommend_date": "2026-08-25",
+   "peers": [],
+   "missing": {},
+   "warnings": [],
+   "info": {
+    "proj_id": "M0856_2553",
+    "proj_abbr_name": "SCBGOLDHFUND",
+    "fund_class_name": "SCBGOLDH",
+    "proj_name_th": "กองทุนเปิดไทยพาณิชย์โกลด์ THB เฮดจ์",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
+    "name": "SCBGOLDH",
+    "days": 362,
+    "warning": null
+   },
+   "image": "charts/SCBGOLDH.png",
+   "returns": {
+    "as_of": "2026-10-15",
+    "nav": 18.1852,
+    "1W": 0.6091252607177688,
+    "1M": -3.0582816689678105,
+    "3M": 1.6961284874649651,
+    "6M": -15.64014900239833,
+    "1Y": -5.816669515182593,
+    "since_rec": -10.587749402613756
+   }
+  },
+  {
+   "name": "ES-GTECH",
+   "recommend_date": "2025-12-23",
+   "peers": [
+    "KFGTECH-A",
+    "KT-WTAI-A"
+   ],
+   "missing": {
+    "SCBGDIGI": "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
+   },
+   "warnings": [],
+   "info": {
+    "proj_id": "M0692_2562",
+    "proj_abbr_name": "ES-GTECH",
+    "fund_class_name": "",
+    "proj_name_th": "กองทุนเปิดอีสท์สปริง Global Technology",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน อีสท์สปริง (ประเทศไทย) จำกัด",
+    "name": "ES-GTECH",
+    "days": 334,
+    "warning": null
+   },
+   "image": "charts/ES-GTECH.png",
+   "returns": {
+    "as_of": "2026-10-09",
+    "nav": 37.0615,
+    "1W": -1.6967629677569929,
+    "1M": 2.9517568592373644,
+    "3M": -0.39881859397632446,
+    "6M": 25.270405473006786,
+    "1Y": 58.34932001418507,
+    "since_rec": 53.99877836458755
+   }
+  },
+  {
+   "name": "SCBNK225",
+   "recommend_date": "2025-11-11",
+   "peers": [],
+   "missing": {},
+   "warnings": [],
+   "info": {
+    "proj_id": "M0429_2556",
+    "proj_abbr_name": "SCBNKY225",
+    "fund_class_name": "SCBNK225",
+    "proj_name_th": "กองทุนเปิดไทยพาณิชย์หุ้นญี่ปุ่น",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
+    "name": "SCBNK225",
+    "days": 362,
+    "warning": null
+   },
+   "image": "charts/SCBNK225.png",
+   "returns": {
+    "as_of": "2026-10-15",
+    "nav": 50.3704,
+    "1W": -6.843102985916549,
+    "1M": 1.8946550740586376,
+    "3M": -3.5714832682441244,
+    "6M": 8.358628285744384,
+    "1Y": 35.16267961842405,
+    "since_rec": 27.147891234766085
+   }
+  },
+  {
+   "name": "KKP GHC-A",
+   "recommend_date": "2025-11-11",
+   "peers": [
+    "KFHHCARE-A"
+   ],
+   "missing": {},
+   "warnings": [],
+   "info": {
+    "proj_id": "M0109_2551",
+    "proj_abbr_name": "KKP GHC FUND",
+    "fund_class_name": "KKP GHC-A",
+    "proj_name_th": "กองทุนเปิดเคเคพี โกลบอล เฮลธ์แคร์",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
+    "name": "KKP GHC-A",
+    "days": 297,
+    "warning": null
+   },
+   "image": "charts/KKP-GHC-A.png",
+   "returns": {
+    "as_of": "2026-10-14",
+    "nav": 18.5385,
+    "1W": 0.28237126953474245,
+    "1M": -2.6462000588161283,
+    "3M": -1.5240048020227936,
+    "6M": 7.080969929415559,
+    "1Y": 17.19283384327508,
+    "since_rec": 10.908035799751126
+   }
+  },
+  {
+   "name": "MPDIVMF",
+   "recommend_date": "2026-07-21",
+   "peers": [],
+   "missing": {},
+   "warnings": [],
+   "info": {
+    "proj_id": "M0517_2556",
+    "proj_abbr_name": "M-PROP DIV",
+    "fund_class_name": "MPDIVMF",
+    "proj_name_th": "กองทุนเปิดเอ็มเอฟซี พร็อพเพอร์ตี้ ดิวิเดนด์ ฟันด์",
+    "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เอ็มเอฟซี จำกัด (มหาชน)",
+    "name": "MPDIVMF",
+    "days": 361,
+    "warning": null
+   },
+   "image": "charts/MPDIVMF.png",
+   "returns": {
+    "as_of": "2026-10-15",
+    "nav": 10.4565,
+    "1W": -3.694186560565871,
+    "1M": -5.071220415611299,
+    "3M": -4.576565066617999,
+    "6M": 4.094492892127599,
+    "1Y": 10.964311865270137,
+    "since_rec": -5.2449865431841385
+   }
+  }
+ ]
+}

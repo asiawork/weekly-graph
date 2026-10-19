@@ -1,0 +1,106 @@
+{
+ "KKP TECH-H": {
+  "proj_id": "M0471_2563",
+  "proj_abbr_name": "KKP TECH-H FUND",
+  "fund_class_name": "KKP TECH-H",
+  "proj_name_th": "กองทุนเปิดเคเคพี EXPANDED TECH - HEDGED",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
+  "name": "KKP TECH-H"
+ },
+ "K-SEMQ": {
+  "proj_id": "M0066_2560",
+  "proj_abbr_name": "K-SEMQ",
+  "fund_class_name": "",
+  "proj_name_th": "กองทุนเปิดเค ซีเล็คทีฟ อีเมอร์จิ้ง มาร์เก็ตส์ หุ้นทุน",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กสิกรไทย จำกัด",
+  "name": "K-SEMQ"
+ },
+ "KT-EMEQ-A": {
+  "proj_id": "M0259_2562",
+  "proj_abbr_name": "KT-EMEQ",
+  "fund_class_name": "KT-EMEQ-A",
+  "proj_name_th": "กองทุนเปิดเคแทม อีเมอร์จิ้ง มาร์เก็ตส์ อิควิตี้ ฟันด์",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงไทย จำกัด (มหาชน)",
+  "name": "KT-EMEQ-A"
+ },
+ "SCBEMEQA": {
+  "proj_id": "M0792_2555",
+  "proj_abbr_name": "SCBEMEQFUND",
+  "fund_class_name": "SCBEMEQA",
+  "proj_name_th": "กองทุนเปิดไทยพาณิชย์หุ้นยั่งยืนตลาดเกิดใหม่",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
+  "name": "SCBEMEQA"
+ },
+ "KF-EM": {
+  "proj_id": "M0729_2555",
+  "proj_abbr_name": "KF-EM",
+  "fund_class_name": "",
+  "proj_name_th": "กองทุนเปิดกรุงศรีอีเมอร์จิ้งมาร์เก็ตส์อิควิตี้",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงศรี จำกัด",
+  "name": "KF-EM"
+ },
+ "SCBGOLDH": {
+  "proj_id": "M0856_2553",
+  "proj_abbr_name": "SCBGOLDHFUND",
+  "fund_class_name": "SCBGOLDH",
+  "proj_name_th": "กองทุนเปิดไทยพาณิชย์โกลด์ THB เฮดจ์",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
+  "name": "SCBGOLDH"
+ },
+ "ES-GTECH": {
+  "proj_id": "M0692_2562",
+  "proj_abbr_name": "ES-GTECH",
+  "fund_class_name": "",
+  "proj_name_th": "กองทุนเปิดอีสท์สปริง Global Technology",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน อีสท์สปริง (ประเทศไทย) จำกัด",
+  "name": "ES-GTECH"
+ },
+ "KFGTECH-A": {
+  "proj_id": "M0693_2559",
+  "proj_abbr_name": "KFGTECH",
+  "fund_class_name": "KFGTECH-A",
+  "proj_name_th": "กองทุนเปิดกรุงศรีโกลบอลเทคโนโลยีอิควิตี้",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงศรี จำกัด",
+  "name": "KFGTECH-A"
+ },
+ "KT-WTAI-A": {
+  "proj_id": "M0141_2561",
+  "proj_abbr_name": "KT-WTAI",
+  "fund_class_name": "KT-WTAI-A",
+  "proj_name_th": "กองทุนเปิดเคแทม เวิลด์ เทคโนโลยี อาร์ทิฟิเชียล อินเทลลิเจนซ์ อิควิตี้ ฟันด์",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงไทย จำกัด (มหาชน)",
+  "name": "KT-WTAI-A"
+ },
+ "SCBNK225": {
+  "proj_id": "M0429_2556",
+  "proj_abbr_name": "SCBNKY225",
+  "fund_class_name": "SCBNK225",
+  "proj_name_th": "กองทุนเปิดไทยพาณิชย์หุ้นญี่ปุ่น",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน ไทยพาณิชย์ จำกัด",
+  "name": "SCBNK225"
+ },
+ "KKP GHC-A": {
+  "proj_id": "M0109_2551",
+  "proj_abbr_name": "KKP GHC FUND",
+  "fund_class_name": "KKP GHC-A",
+  "proj_name_th": "กองทุนเปิดเคเคพี โกลบอล เฮลธ์แคร์",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เกียรตินาคินภัทร จำกัด",
+  "name": "KKP GHC-A"
+ },
+ "KFHHCARE-A": {
+  "proj_id": "M0473_2561",
+  "proj_abbr_name": "KFHHCARE",
+  "fund_class_name": "KFHHCARE-A",
+  "proj_name_th": "กองทุนเปิดกรุงศรีโกลบอลเฮลธ์แคร์อิควิตี้เฮดจ์เอฟเอ็กซ์",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน กรุงศรี จำกัด",
+  "name": "KFHHCARE-A"
+ },
+ "MPDIVMF": {
+  "proj_id": "M0517_2556",
+  "proj_abbr_name": "M-PROP DIV",
+  "fund_class_name": "MPDIVMF",
+  "proj_name_th": "กองทุนเปิดเอ็มเอฟซี พร็อพเพอร์ตี้ ดิวิเดนด์ ฟันด์",
+  "comp_name_th": "บริษัทหลักทรัพย์จัดการกองทุน เอ็มเอฟซี จำกัด (มหาชน)",
+  "name": "MPDIVMF"
+ }
+}
