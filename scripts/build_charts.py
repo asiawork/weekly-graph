@@ -32,7 +32,7 @@ FIG_W, FIG_H, DPI = 7.22, 2.94, 300
 NAVY = "#1b3560"          # เส้นกองที่แนะนำ
 PEERS = ["#eb6834", "#1baf7a", "#eda100", "#e87ba4"]   # เส้นเปรียบเทียบ ลำดับคงที่
 RED = "#d0273e"
-INK, MUTED, GRID = "#1f2937", "#6b7280", "#e5e7eb"
+INK, MUTED, GRID, FRAME = "#1f2937", "#6b7280", "#e8eaee", "#d9dde3"
 
 
 def slug(s: str) -> str:
@@ -93,59 +93,73 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
-    ends = []
-    order = [(fund["name"], NAVY, 2.0, 3)] + [
-        (p, PEERS[i % len(PEERS)], 1.2, 2) for i, p in enumerate(fund["peers"]) if p in series
+    lines = [(fund["name"], NAVY, 1.4, 4)] + [
+        (p, PEERS[i % len(PEERS)], 1.1, 3) for i, p in enumerate(fund["peers"]) if p in series
     ]
-    for name, color, lw, z in order:
+    tags, lo, hi, x_end = [], 0.0, 0.0, start
+    for name, color, lw, z in lines:
         s = series[name]
         s = s[s.index >= start]
         if len(s) < 2:
             continue
         y = (s / s.iloc[0] - 1) * 100
-        ax.plot(y.index, y.values, color=color, lw=lw, zorder=z, solid_capstyle="round")
-        ends.append((y.index[-1], y.iloc[-1], color, z))
+        ax.plot(y.index, y.values, color=color, lw=lw, zorder=z, solid_joinstyle="round")
+        tags.append((float(y.iloc[-1]), color, z))
+        lo, hi = min(lo, y.min()), max(hi, y.max())
+        x_end = max(x_end, y.index[-1])
 
-    # จุดปลายเส้น
-    for x, v, c, z in ends:
-        ax.scatter([x], [v], s=14, color=c, zorder=z + 1, edgecolors="white", linewidths=0.8)
+    ax.axhline(0, color="#9ca3af", lw=0.7, zorder=2)
 
-    ax.axhline(0, color="#9ca3af", lw=0.8, zorder=1)
+    # กรอบ + เส้นตาราง (แนวนอนและแนวตั้ง)
+    ax.grid(axis="both", color=GRID, lw=0.7)
+    ax.set_axisbelow(True)
+    for sp in ax.spines.values():
+        sp.set_color(FRAME)
+        sp.set_linewidth(0.8)
 
-    # เว้นที่ว่างด้านบนให้ชื่อกอง ไม่ทับเส้น
-    lo, hi = ax.get_ylim()
-    lo, hi = min(lo, 0), max(hi, 0)
-    rng = hi - lo or 1
-    ax.set_ylim(lo - rng * 0.04, hi + rng * 0.14)
-
-    # แกน
+    # แกน y ด้านขวา
     ax.yaxis.tick_right()
+    ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(5))
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    span = (ends[0][0] - start).days if ends else 0
+
+    # แกน x ปรับตามช่วงเวลา
+    span = (x_end - start).days
     if span <= 75:
         ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO, interval=2))
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
     elif span <= 200:
         ax.xaxis.set_major_locator(mdates.MonthLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
-    else:
-        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 3, 5, 7, 9, 11) if span <= 420 else (1, 4, 7, 10)))
+    elif span <= 420:
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 3, 5, 7, 9, 11)))
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
-    ax.tick_params(colors=MUTED, length=0, labelsize=6.5)
-    ax.grid(axis="y", color=GRID, lw=0.6)
-    ax.set_axisbelow(True)
-    for sp in ax.spines.values():
-        sp.set_visible(False)
-    ax.spines["bottom"].set_visible(True)
-    ax.spines["bottom"].set_color("#d1d5db")
-    ax.margins(x=0.01)
+    else:
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 4, 7, 10)))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+    ax.tick_params(colors=MUTED, length=0, labelsize=6.5, pad=3)
+    ax.set_xlim(start, x_end)
+
+    rng = (hi - lo) or 1
+    ax.set_ylim(lo - rng * 0.06, hi + rng * 0.18)
 
     # ชื่อกองมุมซ้ายบน
-    ax.text(0.012, 0.985, fund["name"], transform=ax.transAxes, ha="left", va="top",
+    ax.text(0.012, 0.975, fund["name"], transform=ax.transAxes, ha="left", va="top",
             fontsize=8.5, fontweight="bold", color=NAVY)
 
+    # tag ค่าล่าสุดติดแกนขวา
+    for v, color, z in tags:
+        ax.annotate(f"{v:+.2f}%", xy=(1, v), xycoords=("axes fraction", "data"),
+                    xytext=(4, 0), textcoords="offset points", ha="left", va="center",
+                    fontsize=7, fontweight="bold", color="white", annotation_clip=False, zorder=10 + z,
+                    bbox=dict(boxstyle="round,pad=0.35,rounding_size=0.25", fc=color, ec="none"))
 
-    fig.subplots_adjust(left=0.02, right=0.93, top=0.97, bottom=0.11)
+    # ซ่อนตัวเลขแกนที่ทับ tag
+    fig.canvas.draw()
+    for t, val in zip(ax.get_yticklabels(), ax.get_yticks()):
+        if any(abs(val - v) < rng * 0.09 for v, _, _ in tags):
+            t.set_visible(False)
+
+    fig.subplots_adjust(left=0.015, right=0.90, top=0.97, bottom=0.10)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=DPI, facecolor="white")
     plt.close(fig)
