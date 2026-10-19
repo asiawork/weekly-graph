@@ -24,8 +24,7 @@ NAV_DIR = ROOT / "data" / "nav"
 OUT = ROOT / "docs"
 CHARTS = OUT / "charts"
 
-LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "1095"))   # 3 ปี
-WEEKLY = os.getenv("WEEKLY", "1") == "1"   # 1 = ใช้ NAV สิ้นสัปดาห์ (เหมือนกราฟเดิม)
+LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "365"))   # ใช้เฉพาะกองที่ไม่ได้ใส่วันแนะนำ
 
 # ขนาดเท่ากรอบกราฟในรายงาน: 520 x 212 pt = 7.22 x 2.94 นิ้ว
 FIG_W, FIG_H, DPI = 7.22, 2.94, 300
@@ -101,16 +100,10 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     for name, color, lw, z in order:
         s = series[name]
         s = s[s.index >= start]
-        if WEEKLY:
-            s = s.resample("W-FRI").last().dropna()
-            # ให้จุดสุดท้ายเป็นวันล่าสุดจริง ไม่ใช่วันศุกร์ล่วงหน้า
-            last = series[name]
-            s.index = s.index.where(s.index <= last.index[-1], last.index[-1])
         if len(s) < 2:
             continue
         y = (s / s.iloc[0] - 1) * 100
-        ax.plot(y.index, y.values, color=color, lw=lw, zorder=z,
-                solid_capstyle="round", label=f"{name}  {y.iloc[-1]:+.2f}%")
+        ax.plot(y.index, y.values, color=color, lw=lw, zorder=z, solid_capstyle="round")
         ends.append((y.index[-1], y.iloc[-1], color, z))
 
     # จุดปลายเส้น
@@ -119,28 +112,25 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
 
     ax.axhline(0, color="#9ca3af", lw=0.8, zorder=1)
 
-    # เว้นที่ว่างด้านบนให้ป้ายวันแนะนำ ไม่ทับเส้น
+    # เว้นที่ว่างด้านบนให้ชื่อกอง ไม่ทับเส้น
     lo, hi = ax.get_ylim()
     lo, hi = min(lo, 0), max(hi, 0)
     rng = hi - lo or 1
-    ax.set_ylim(lo - rng * 0.04, hi + rng * 0.12)
-
-    # เส้นวันแนะนำ
-    if fund["rec"] and pd.Timestamp(fund["rec"]) >= start:
-        rx = pd.Timestamp(fund["rec"])
-        ax.axvline(rx, color=RED, lw=1, ls=(0, (3, 2)), zorder=2)
-        x0, x1 = mdates.date2num(start), mdates.date2num(pd.Timestamp(max(s.index[-1] for s in series.values())))
-        near_right = (mdates.date2num(rx) - x0) / max(x1 - x0, 1) > 0.72
-        ax.annotate(f"Recommended {fund['rec'].strftime('%d/%m/%Y')}", xy=(rx, 1), xycoords=("data", "axes fraction"),
-                    xytext=(-3 if near_right else 3, -2), textcoords="offset points", va="top",
-                    ha="right" if near_right else "left", fontsize=6.2, color=RED,
-                    bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none"))
+    ax.set_ylim(lo - rng * 0.04, hi + rng * 0.14)
 
     # แกน
     ax.yaxis.tick_right()
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 4, 7, 10)))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+    span = (ends[0][0] - start).days if ends else 0
+    if span <= 75:
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO, interval=2))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
+    elif span <= 200:
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+    else:
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 3, 5, 7, 9, 11) if span <= 420 else (1, 4, 7, 10)))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
     ax.tick_params(colors=MUTED, length=0, labelsize=6.5)
     ax.grid(axis="y", color=GRID, lw=0.6)
     ax.set_axisbelow(True)
@@ -189,10 +179,13 @@ def main():
             "info": report.get("funds", {}).get(f["name"], {}),
         }
         if f["name"] in series:
-            start_d = today - timedelta(days=LOOKBACK_DAYS)
+            # เริ่มกราฟที่ NAV วันแนะนำ (หรือวันทำการก่อนหน้าถ้าวันนั้นไม่มี NAV)
+            s0 = series[f["name"]]
             if f["rec"]:
-                start_d = min(start_d, f["rec"] - timedelta(days=31))
-            start = max(pd.Timestamp(start_d), series[f["name"]].index[0])
+                before = s0[s0.index <= pd.Timestamp(f["rec"])]
+                start = before.index[-1] if len(before) else s0.index[0]
+            else:
+                start = max(pd.Timestamp(today - timedelta(days=LOOKBACK_DAYS)), s0.index[0])
             img = f"charts/{slug(f['name'])}.png"
             draw(f, series, start, OUT / img)
             entry["image"] = img

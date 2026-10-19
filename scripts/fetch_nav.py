@@ -34,7 +34,7 @@ BASE = "https://api.sec.or.th/v2/fund"
 PROFILES_URL = f"{BASE}/general-info/profiles"
 NAV_URL = f"{BASE}/daily-info/nav"
 
-LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "1095"))  # 3 ปี
+LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "365"))   # ใช้เฉพาะกองที่ไม่ได้ใส่วันแนะนำ
 CHUNK_DAYS = int(os.getenv("NAV_CHUNK_DAYS", "31"))       # ดึงทีละกี่วันต่อ 1 call
 REFETCH_DAYS = 10                                          # ดึงซ้ำย้อนหลังกันข้อมูลแก้ไขย้อนหลัง
 
@@ -328,7 +328,6 @@ def main():
                     break
         return
 
-    # ช่วงข้อมูล: ย้อนหลัง LOOKBACK_DAYS หรือก่อนวันแนะนำ 1 เดือน แล้วแต่อันไหนเก่ากว่า
     rec_dates = {}
     for f in funds:
         try:
@@ -338,9 +337,11 @@ def main():
 
     report = {"run_at": datetime.utcnow().isoformat() + "Z", "funds": {}, "missing": missing}
     for f in funds:
-        start = today - timedelta(days=LOOKBACK_DAYS)
+        # ดึงตั้งแต่ก่อนวันแนะนำเล็กน้อย (เผื่อวันแนะนำเป็นวันหยุด)
         if f["name"] in rec_dates:
-            start = min(start, rec_dates[f["name"]] - timedelta(days=31))
+            start = rec_dates[f["name"]] - timedelta(days=14)
+        else:
+            start = today - timedelta(days=LOOKBACK_DAYS)
         for n in [f["name"], *f["peers"]]:
             if n not in resolved or n in report["funds"]:
                 continue
