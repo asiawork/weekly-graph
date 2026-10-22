@@ -17,6 +17,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -85,6 +86,79 @@ def returns(s: pd.Series, rec):
 
 def fmt_pct(v):
     return "–" if v is None else f"{v:+.2f}%"
+
+
+def zigzag(v, th):
+    """จุดกลับตัวแบบ ZigZag: นับเป็นจุดกลับตัวเมื่อราคาย้อนจากจุดสุดขั้วเกิน th (สัดส่วน เช่น 0.03 = 3%)"""
+    piv, trend, ext = [], 0, 0
+    for i in range(1, len(v)):
+        if trend == 0:
+            if v[i] / v[0] - 1 >= th:
+                trend, ext = 1, i
+            elif v[i] / v[0] - 1 <= -th:
+                trend, ext = -1, i
+        elif trend == 1:
+            if v[i] > v[ext]:
+                ext = i
+            elif v[i] / v[ext] - 1 <= -th:
+                piv.append(ext)
+                trend, ext = -1, i
+        else:
+            if v[i] < v[ext]:
+                ext = i
+            elif v[i] / v[ext] - 1 >= th:
+                piv.append(ext)
+                trend, ext = 1, i
+    return piv   # ไม่รวมขาสุดท้ายที่ยังไม่ยืนยัน
+
+
+def find_levels(s: pd.Series):
+    """
+    แนวรับ–แนวต้านอัตโนมัติจาก NAV ช่วงที่แสดงบนกราฟ
+
+    1) หาจุดกลับตัวด้วย ZigZag ราคาต้องย้อนเกิน th ถึงจะนับ ช่วยตัดการแกว่งเล็กๆ ทิ้ง
+       th ≈ ความผันผวน 1 สัปดาห์ × 2 (ไม่เกิน 30% ของกรอบราคา) จำกัดไว้ที่ 1.5%–6%
+    2) จุดที่ราคาห่างกันไม่เกินครึ่งหนึ่งของ th ให้รวมเป็นแนวเดียว (นับจำนวนครั้งที่แตะ)
+    3) เลือกแนวที่ใกล้ NAV ล่าสุดที่สุด ฝั่งละ 1 เส้น ถ้าฝั่งไหนไม่มีจุดกลับตัว
+       ให้ใช้จุดสูงสุด/ต่ำสุดของช่วงแทน
+    """
+    v = s.values.astype(float)
+    n = len(v)
+    if n < 15:
+        return []
+    r = np.diff(np.log(v))
+    rng_pct = (v.max() - v.min()) / v.mean()
+    th = float(np.clip(min(2 * r.std() * np.sqrt(5), rng_pct * 0.3), 0.015, 0.06))
+
+    last = v[-1]
+    tol = last * th / 2
+    pts = sorted((v[i], i) for i in zigzag(v, th) if i > 0)
+
+    clusters = []
+    for price, i in pts:
+        if clusters and price - clusters[-1]["prices"][0] <= tol:
+            clusters[-1]["prices"].append(price)
+            clusters[-1]["idx"].append(i)
+        else:
+            clusters.append({"prices": [price], "idx": [i]})
+    levels = [{"nav": float(np.mean(c["prices"])), "touches": len(c["prices"]), "i": max(c["idx"])}
+              for c in clusters]
+
+    out = []
+    for side, below in (("support", True), ("resistance", False)):
+        ok = (lambda x: x < last - tol / 2) if below else (lambda x: x > last + tol / 2)
+        cand = [lv for lv in levels if ok(lv["nav"])]
+        if not cand:
+            i = int(v.argmin() if below else v.argmax())
+            if ok(v[i]):
+                cand = [{"nav": float(v[i]), "touches": 1, "i": i, "extreme": True}]
+        if cand:
+            lv = min(cand, key=lambda x: abs(x["nav"] - last))
+            out.append({"side": side, "nav": round(lv["nav"], 4), "touches": lv["touches"],
+                        "last_touch": s.index[lv["i"]].date().isoformat(),
+                        "basis": "low" if lv.get("extreme") and below else
+                                 "high" if lv.get("extreme") else "swing"})
+    return out
 
 
 def draw(fund, series: dict, start: pd.Timestamp, path: Path):
@@ -162,7 +236,15 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     fig.subplots_adjust(left=0.015, right=0.90, top=0.97, bottom=0.10)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=DPI, facecolor="white")
+
+    # ตำแหน่งกรอบกราฟในรูป (สัดส่วน 0–1 นับจากซ้ายล่าง) + ช่วงแกน y
+    # หน้าเว็บใช้แปลงตำแหน่งเมาส์ ↔ % ↔ NAV เพื่อวาดเส้นแนวรับแนวต้านทับรูปให้ตรง
+    pos = ax.get_position()
+    ymin, ymax = ax.get_ylim()
     plt.close(fig)
+    return {"left": round(pos.x0, 5), "right": round(pos.x1, 5),
+            "bottom": round(pos.y0, 5), "top": round(pos.y1, 5),
+            "ymin": round(ymin, 5), "ymax": round(ymax, 5)}
 
 
 def main():
@@ -201,7 +283,11 @@ def main():
             else:
                 start = max(pd.Timestamp(today - timedelta(days=LOOKBACK_DAYS)), s0.index[0])
             img = f"charts/{slug(f['name'])}.png"
-            draw(f, series, start, OUT / img)
+            entry["axes"] = draw(f, series, start, OUT / img)
+            shown = s0[s0.index >= start]
+            entry["base_nav"] = round(float(shown.iloc[0]), 4)    # NAV ที่ 0% บนกราฟ
+            entry["last_nav"] = round(float(shown.iloc[-1]), 4)
+            entry["levels"] = find_levels(shown)
             entry["image"] = img
             entry["returns"] = returns(series[f["name"]], f["rec"])
             print(f"chart {f['name']}: since rec {fmt_pct(entry['returns']['since_rec'])}")

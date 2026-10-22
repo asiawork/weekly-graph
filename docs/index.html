@@ -40,8 +40,37 @@
   .btn.ghost { background: #fff; color: var(--navy); }
   .btn.done { background: var(--pos); border-color: var(--pos); color: #fff; }
 
-  .chart { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+  .chart { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
   .chart img { display: block; width: 100%; height: auto; }
+  .chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: pan-y; }
+  .chart canvas.grab { cursor: ns-resize; }
+  .chart canvas.off { cursor: default; }
+
+  /* แนวรับ–แนวต้าน */
+  .lv { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .lv-head { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+  .lv-head b { color: var(--navy); font-size: 15px; }
+  .lv-head .state { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: 6px; }
+  .lv-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .btn.sm { padding: 5px 11px; font-size: 13px; border-radius: 8px; }
+  .tgl { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin-right: 4px; cursor: pointer; }
+  .tgl input { accent-color: var(--navy); width: 15px; height: 15px; }
+  .lv-hint { color: var(--muted); font-size: 12.5px; margin: 6px 0 10px; }
+  .lv-row { display: grid; grid-template-columns: 74px 120px 1fr auto 32px; align-items: center; gap: 10px;
+            padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .lv-row:first-child { border-top: 0; }
+  .badge { border-radius: 6px; padding: 2px 8px; font-size: 12.5px; font-weight: 600; text-align: center; }
+  .badge.res { background: #fdecec; color: var(--neg); }
+  .badge.sup { background: #e7f5ee; color: var(--pos); }
+  .lv-row input { font: inherit; font-size: 14px; width: 100%; padding: 4px 8px; border: 1px solid var(--line);
+                  border-radius: 7px; font-variant-numeric: tabular-nums; }
+  .lv-row input:focus { outline: 2px solid var(--navy-2); outline-offset: -1px; }
+  .lv-row .dist { font-variant-numeric: tabular-nums; }
+  .lv-row .src { color: var(--muted); font-size: 12.5px; text-align: right; }
+  .lv-row .x { border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer;
+               border-radius: 6px; width: 28px; height: 28px; }
+  .lv-row .x:hover { background: var(--bg); color: var(--neg); }
+  .lv-empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
 
   .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 14px; }
   .kpi { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
@@ -70,6 +99,8 @@
 
   @media (max-width: 720px) {
     .kpis { grid-template-columns: repeat(3, 1fr); }
+    .lv-row { grid-template-columns: 64px 1fr 28px; }
+    .lv-row .dist, .lv-row .src { grid-column: 2 / 3; text-align: left; margin-top: -6px; }
     header h1 { font-size: 20px; }
   }
 </style>
@@ -96,10 +127,22 @@
       </div>
       <div class="actions">
         <button class="btn primary" id="copy">Copy รูป</button>
-        <a class="btn ghost" id="download" download>ดาวน์โหลด PNG</a>
+        <button class="btn ghost" id="download">ดาวน์โหลด PNG</button>
       </div>
     </div>
-    <div class="chart"><img id="img" alt=""></div>
+    <div class="chart" id="chartBox"><img id="img" alt=""><canvas id="ov" aria-label="คลิกเพื่อเพิ่มเส้นแนวรับแนวต้าน"></canvas></div>
+    <div class="lv" id="lv" hidden>
+      <div class="lv-head">
+        <div><b>แนวรับ–แนวต้าน</b><span class="state" id="lvState"></span></div>
+        <div class="lv-tools">
+          <label class="tgl"><input type="checkbox" id="lvShow" checked> แสดงบนกราฟ</label>
+          <button class="btn ghost sm" id="lvReset">ใช้แนวที่ระบบเสนอ</button>
+          <button class="btn ghost sm" id="lvClear">ลบทั้งหมด</button>
+        </div>
+      </div>
+      <div class="lv-hint">คลิกบนกราฟเพื่อเพิ่มเส้น · ลากเส้นขึ้นลงเพื่อเลื่อน · ดับเบิลคลิกที่เส้นเพื่อลบ · พิมพ์ NAV ในช่องเพื่อตั้งค่าเป๊ะๆ — เส้นที่เห็นจะติดไปกับรูปตอนกด Copy / ดาวน์โหลด</div>
+      <div id="lvList"></div>
+    </div>
     <div class="kpis" id="kpis"></div>
     <div class="notice" id="notice" hidden></div>
     <div class="tip">วางใน PowerPoint ให้พอดีกรอบเดิม: <b>คลิกขวาที่รูปกราฟเก่า → Change Picture → From Clipboard</b> รูปใหม่จะเข้าไปแทนที่ขนาดและตำแหน่งเดิมทันที</div>
@@ -110,7 +153,8 @@
     <table id="tbl"></table>
   </div>
 
-  <footer>ข้อมูล NAV จาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย · แก้รายชื่อกองได้ที่ไฟล์ funds.csv ใน repo</footer>
+  <footer>ข้อมูล NAV จาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย · แก้รายชื่อกองได้ที่ไฟล์ funds.csv ใน repo<br>
+  แนวรับ–แนวต้านที่ระบบเสนอหาจากจุดกลับตัวของ NAV (ZigZag) ในช่วงที่แสดงบนกราฟ ใช้ประกอบการดูภาพรวมเท่านั้น ไม่ใช่สัญญาณซื้อขาย · เส้นที่ปรับเองบันทึกไว้ในเบราว์เซอร์เครื่องนี้</footer>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -144,11 +188,13 @@ function select(name) {
   if (f.image) {
     const src = f.image + "?v=" + DATA.updated;
     $("img").src = src; $("img").alt = "กราฟ NAV " + f.name;
-    $("download").href = src; $("download").setAttribute("download", f.name.replace(/[^A-Za-z0-9]+/g, "-") + ".png");
-    $("copy").disabled = false; $("img").parentElement.hidden = false;
+    $("copy").disabled = false; $("download").disabled = false; $("img").parentElement.hidden = false;
   } else {
-    $("img").parentElement.hidden = true; $("copy").disabled = true;
+    $("img").parentElement.hidden = true; $("copy").disabled = true; $("download").disabled = true;
   }
+  const canLevels = !!(f.image && f.axes && f.base_nav);
+  $("lv").hidden = !canLevels; $("ov").hidden = !canLevels;
+  if (canLevels) { loadLevels(f); renderLevels(); }
 
   const r = f.returns || {};
   $("kpis").innerHTML = COLS.map(([k, label]) =>
@@ -166,15 +212,248 @@ async function copyImage() {
   if (!current || !current.image) return;
   const btn = $("copy");
   try {
-    const blob = fetch(current.image + "?v=" + DATA.updated).then(r => r.blob())
-                  .then(b => b.type === "image/png" ? b : new Blob([b], { type: "image/png" }));
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": composeBlob() })]);
     btn.textContent = "Copy แล้ว ✓"; btn.classList.add("done");
     toast("Copy รูป " + current.name + " แล้ว ไปวางใน PowerPoint ได้เลย");
     setTimeout(() => { btn.textContent = "Copy รูป"; btn.classList.remove("done"); }, 1800);
   } catch (e) {
     toast("เบราว์เซอร์นี้ copy รูปไม่ได้ ใช้ปุ่มดาวน์โหลด PNG แทน");
   }
+}
+
+/* ───────────── แนวรับ–แนวต้าน ─────────────
+   เส้นเก็บเป็นค่า NAV (ไม่ใช่ %) เพื่อให้ยังถูกตำแหน่งเมื่อกราฟสัปดาห์หน้าขยับสเกล
+   ตำแหน่งกรอบกราฟ (axes) + ช่วงแกน y มาจาก build_charts.py ใน data.json */
+const LV = { lines: [], show: true, edited: false, hover: null, drag: null, down: null, seq: 0 };
+const LV_COLOR = { res: "#c62828", sup: "#0f8a4b", add: "#1b3560" };
+const LV_FONT = '600 27px "IBM Plex Sans Thai", "DejaVu Sans", sans-serif';
+const lvKey = (name) => "wg-levels:" + name;
+const fmtNav = (v) => v.toFixed(4);
+
+function autoLines(f) {
+  return (f.levels || []).map(l => ({ id: ++LV.seq, nav: l.nav, auto: true, touches: l.touches, basis: l.basis }));
+}
+function loadLevels(f) {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(lvKey(f.name)) || "null"); } catch (e) {}
+  if (saved && Array.isArray(saved.lines)) {
+    LV.lines = saved.lines.filter(l => l.nav > 0).map(l => ({ ...l, id: ++LV.seq }));
+    LV.show = saved.show !== false; LV.edited = true;
+  } else {
+    LV.lines = autoLines(f); LV.show = true; LV.edited = false;
+  }
+  LV.hover = LV.drag = null;
+}
+function saveLevels() {
+  LV.edited = true;
+  const lines = LV.lines.map(({ nav, auto, touches, basis }) => ({ nav, auto, touches, basis }));
+  try { localStorage.setItem(lvKey(current.name), JSON.stringify({ lines, show: LV.show })); } catch (e) {}
+}
+
+const sideOf = (nav) => nav >= current.last_nav ? "res" : "sup";
+const navToPct = (nav) => (nav / current.base_nav - 1) * 100;
+const pctToNav = (p) => current.base_nav * (1 + p / 100);
+function geo(W, H) {
+  const a = current.axes;
+  return { x0: a.left * W, x1: a.right * W, yt: (1 - a.top) * H, yb: (1 - a.bottom) * H, ymin: a.ymin, ymax: a.ymax };
+}
+const yOf = (g, p) => g.yt + (g.ymax - p) / (g.ymax - g.ymin) * (g.yb - g.yt);
+const pOfY = (g, y) => g.ymax - (y - g.yt) / (g.yb - g.yt) * (g.ymax - g.ymin);
+const inRange = (g, nav) => { const p = navToPct(nav); return p >= g.ymin && p <= g.ymax; };
+
+function pill(ctx, g, y, text, color, away, filled) {
+  // ป้ายชิดขวาในกรอบกราฟ วางฝั่งที่ "ห่างจากราคาล่าสุด" (แนวต้าน=เหนือเส้น, แนวรับ=ใต้เส้น) จะได้ไม่ทับเส้น NAV
+  ctx.font = LV_FONT;
+  const w = ctx.measureText(text).width + 22, h = 38, gap = 7;
+  let top = away === "up" ? y - gap - h : y + gap;
+  if (top < g.yt + 2) top = y + gap;
+  if (top + h > g.yb - 2) top = y - gap - h;
+  const x = g.x1 - 12 - w;
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.roundRect(x, top, w, h, 9);
+  ctx.fillStyle = filled ? color : "rgba(255,255,255,.92)"; ctx.fill();
+  if (!filled) { ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.stroke(); }
+  ctx.fillStyle = filled ? "#fff" : color; ctx.textBaseline = "middle";
+  ctx.fillText(text, x + 11, top + h / 2 + 1);
+  ctx.restore();
+}
+
+function drawLevels(ctx, W, H, live) {
+  if (!current || !current.axes) return;
+  const g = geo(W, H);
+  if (LV.show) {
+    for (const l of LV.lines) {
+      if (!inRange(g, l.nav)) continue;
+      const y = Math.round(yOf(g, navToPct(l.nav))) + .5, side = sideOf(l.nav), color = LV_COLOR[side];
+      const hot = live && ((LV.drag && LV.drag.id === l.id) || (LV.hover && LV.hover.id === l.id));
+      ctx.save();
+      ctx.beginPath(); ctx.rect(g.x0, g.yt, g.x1 - g.x0, g.yb - g.yt); ctx.clip();
+      ctx.strokeStyle = color; ctx.lineWidth = hot ? 6 : 4; ctx.setLineDash([22, 13]);
+      ctx.beginPath(); ctx.moveTo(g.x0, y); ctx.lineTo(g.x1, y); ctx.stroke();
+      ctx.restore();
+      pill(ctx, g, y, (side === "res" ? "แนวต้าน " : "แนวรับ ") + fmtNav(l.nav), color, side === "res" ? "up" : "down", hot);
+    }
+  }
+  if (live && LV.hover && LV.hover.y != null) {          // เส้นพรีวิวก่อนคลิกเพิ่ม (ไม่ติดไปกับรูป)
+    const y = Math.round(LV.hover.y) + .5;
+    ctx.save();
+    ctx.globalAlpha = .45; ctx.strokeStyle = LV_COLOR.add; ctx.lineWidth = 3; ctx.setLineDash([10, 10]);
+    ctx.beginPath(); ctx.moveTo(g.x0, y); ctx.lineTo(g.x1, y); ctx.stroke();
+    ctx.restore();
+    const nav = pctToNav(pOfY(g, LV.hover.y));
+    pill(ctx, g, y, "+ เพิ่มเส้น " + fmtNav(nav), LV_COLOR.add, nav >= current.last_nav ? "up" : "down", false);
+  }
+}
+
+function redraw() {
+  const cv = $("ov"), img = $("img");
+  if (cv.hidden || !img.naturalWidth) return;
+  if (cv.width !== img.naturalWidth || cv.height !== img.naturalHeight) {
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  }
+  const ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  drawLevels(ctx, cv.width, cv.height, true);
+}
+
+function renderLevels() {
+  redraw();
+  $("lvShow").checked = LV.show;
+  const nAuto = (current.levels || []).length;
+  $("lvState").textContent = LV.edited ? "· ปรับเองแล้ว (บันทึกในเบราว์เซอร์นี้)"
+                                       : nAuto ? "· ระบบเสนอ " + nAuto + " เส้น" : "· ระบบหาแนวไม่พบในช่วงนี้";
+  $("lvReset").disabled = !LV.edited;
+  $("lvClear").disabled = !LV.lines.length;
+  const ae = document.activeElement;
+  if (ae && ae.tagName === "INPUT" && $("lvList").contains(ae)) return;   // อย่ารีเฟรชรายการระหว่างพิมพ์
+  const g = geo(1, 1), last = current.last_nav;
+  const rows = [...LV.lines].sort((a, b) => b.nav - a.nav).map(l => {
+    const side = sideOf(l.nav), d = (l.nav / last - 1) * 100;
+    const src = l.auto
+      ? (l.basis === "high" ? "ระบบเสนอ · จุดสูงสุดของช่วง" : l.basis === "low" ? "ระบบเสนอ · จุดต่ำสุดของช่วง"
+         : "ระบบเสนอ · จุดกลับตัว " + (l.touches || 1) + " ครั้ง")
+      : "เพิ่มเอง";
+    return `<div class="lv-row" data-id="${l.id}">
+      <span class="badge ${side}">${side === "res" ? "แนวต้าน" : "แนวรับ"}</span>
+      <input type="number" step="0.0001" min="0" value="${fmtNav(l.nav)}" aria-label="NAV ของเส้น">
+      <span class="dist">ห่างจาก NAV ล่าสุด <b class="${d >= 0 ? "pos" : "neg"}">${(d > 0 ? "+" : "") + d.toFixed(2)}%</b>${inRange(g, l.nav) ? "" : " <small>(อยู่นอกกรอบกราฟ)</small>"}</span>
+      <span class="src">${src}</span>
+      <button class="x" title="ลบเส้นนี้" aria-label="ลบเส้นนี้">×</button>
+    </div>`;
+  }).join("");
+  $("lvList").innerHTML = rows || `<div class="lv-empty">ยังไม่มีเส้น — คลิกบนกราฟตรงระดับที่ต้องการเพื่อเพิ่ม</div>`;
+}
+
+function pointerInfo(e) {
+  const cv = $("ov"), r = cv.getBoundingClientRect();
+  const sx = cv.width / r.width, sy = cv.height / r.height;
+  const x = (e.clientX - r.left) * sx, y = (e.clientY - r.top) * sy;
+  const g = geo(cv.width, cv.height);
+  const inside = x >= g.x0 && x <= g.x1 && y >= g.yt && y <= g.yb;
+  let hit = null, best = 12 * sy;                       // ระยะจับเส้น ~12px บนจอ
+  if (LV.show) for (const l of LV.lines) {
+    if (!inRange(g, l.nav)) continue;
+    const dy = Math.abs(yOf(g, navToPct(l.nav)) - y);
+    if (dy <= best) { best = dy; hit = l; }
+  }
+  return { x, y, g, inside, hit };
+}
+
+function setupLevels() {
+  const cv = $("ov");
+  $("img").addEventListener("load", redraw);
+
+  cv.addEventListener("pointermove", (e) => {
+    if (!current) return;
+    const p = pointerInfo(e);
+    if (LV.drag) {
+      const yy = Math.min(Math.max(p.y, p.g.yt), p.g.yb);
+      const l = LV.lines.find(x => x.id === LV.drag.id);
+      l.nav = +pctToNav(pOfY(p.g, yy)).toFixed(4); l.auto = false; LV.drag.moved = true;
+      renderLevels(); return;
+    }
+    LV.hover = p.hit ? { id: p.hit.id } : p.inside && e.pointerType === "mouse" ? { y: p.y } : null;
+    cv.classList.toggle("grab", !!p.hit);
+    redraw();
+  });
+  cv.addEventListener("pointerleave", () => { if (!LV.drag) { LV.hover = null; redraw(); } });
+  cv.addEventListener("pointerdown", (e) => {
+    const p = pointerInfo(e);
+    LV.down = { x: e.clientX, y: e.clientY };
+    if (p.hit) { LV.drag = { id: p.hit.id, moved: false }; cv.setPointerCapture(e.pointerId); e.preventDefault(); }
+  });
+  cv.addEventListener("pointerup", (e) => {
+    if (LV.drag) {
+      const moved = LV.drag.moved; LV.drag = null;
+      if (moved) { saveLevels(); renderLevels(); }
+      return;
+    }
+    if (!LV.down || Math.hypot(e.clientX - LV.down.x, e.clientY - LV.down.y) > 6) return;   // เลื่อนจอ ไม่ใช่คลิก
+    LV.down = null;
+    const p = pointerInfo(e);
+    if (!p.inside || p.hit) return;
+    LV.lines.push({ id: ++LV.seq, nav: +pctToNav(pOfY(p.g, p.y)).toFixed(4), auto: false });
+    LV.show = true; LV.hover = null;
+    saveLevels(); renderLevels();
+  });
+  cv.addEventListener("dblclick", (e) => {
+    const p = pointerInfo(e);
+    if (!p.hit) return;
+    LV.lines = LV.lines.filter(l => l.id !== p.hit.id);
+    LV.hover = null; saveLevels(); renderLevels();
+  });
+
+  $("lvList").addEventListener("click", (e) => {
+    const b = e.target.closest(".x"); if (!b) return;
+    const id = +b.closest(".lv-row").dataset.id;
+    LV.lines = LV.lines.filter(l => l.id !== id); saveLevels(); renderLevels();
+  });
+  $("lvList").addEventListener("change", (e) => {
+    if (e.target.tagName !== "INPUT") return;
+    const id = +e.target.closest(".lv-row").dataset.id, v = parseFloat(e.target.value);
+    const l = LV.lines.find(x => x.id === id);
+    if (l && v > 0) { l.nav = +v.toFixed(4); l.auto = false; saveLevels(); }
+    e.target.blur(); renderLevels();
+  });
+  $("lvList").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") e.target.blur(); });
+  $("lvList").addEventListener("focusout", () => setTimeout(() => {
+    if (!$("lvList").contains(document.activeElement)) renderLevels();
+  }, 0));
+
+  $("lvShow").addEventListener("change", (e) => { LV.show = e.target.checked; saveLevels(); renderLevels(); });
+  $("lvClear").addEventListener("click", () => { LV.lines = []; saveLevels(); renderLevels(); });
+  $("lvReset").addEventListener("click", () => {
+    try { localStorage.removeItem(lvKey(current.name)); } catch (e) {}
+    loadLevels(current); renderLevels();
+    toast("กลับไปใช้แนวที่ระบบเสนอแล้ว");
+  });
+
+  if (document.fonts && document.fonts.load) document.fonts.load(LV_FONT).then(redraw).catch(() => {});
+}
+
+/* รูปที่ copy / ดาวน์โหลด = กราฟเดิม + เส้นที่แสดงอยู่ (ขนาดเท่ากราฟเดิมทุกพิกเซล) */
+async function composeBlob() {
+  const img = $("img");
+  if (!img.complete || !img.naturalWidth) await new Promise((ok, no) => { img.onload = ok; img.onerror = no; });
+  try { await document.fonts.load(LV_FONT); } catch (e) {}
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+  if (!$("lv").hidden) drawLevels(ctx, c.width, c.height, false);
+  return new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error("toBlob")), "image/png"));
+}
+
+async function downloadImage() {
+  if (!current || !current.image) return;
+  try {
+    const url = URL.createObjectURL(await composeBlob());
+    const a = document.createElement("a");
+    a.href = url; a.download = current.name.replace(/[^A-Za-z0-9]+/g, "-") + ".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { toast("ดาวน์โหลดไม่สำเร็จ"); }
 }
 
 function renderTable() {
@@ -223,6 +502,8 @@ async function init() {
 }
 
 $("copy").addEventListener("click", copyImage);
+$("download").addEventListener("click", downloadImage);
+setupLevels();
 $("copyTable").addEventListener("click", copyTable);
 init();
 </script>

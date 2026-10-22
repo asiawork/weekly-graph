@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-19",
+ "updated": "2026-10-22",
  "funds": [
   {
    "name": "KKP TECH-H",
@@ -17,6 +17,32 @@
     "days": 77,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -4.14149,
+    "ymax": 8.67801
+   },
+   "base_nav": 26.6359,
+   "last_nav": 26.9537,
+   "levels": [
+    {
+     "side": "support",
+     "nav": 25.698,
+     "touches": 1,
+     "last_touch": "2026-08-24",
+     "basis": "swing"
+    },
+    {
+     "side": "resistance",
+     "nav": 28.4517,
+     "touches": 1,
+     "last_touch": "2026-10-06",
+     "basis": "swing"
+    }
+   ],
    "image": "charts/KKP-TECH-H.png",
    "returns": {
     "as_of": "2026-10-14",
@@ -45,6 +71,32 @@
     "days": 290,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -3.17657,
+    "ymax": 62.47259
+   },
+   "base_nav": 12.7987,
+   "last_nav": 17.2556,
+   "levels": [
+    {
+     "side": "support",
+     "nav": 16.3296,
+     "touches": 1,
+     "last_touch": "2026-02-25",
+     "basis": "swing"
+    },
+    {
+     "side": "resistance",
+     "nav": 18.6587,
+     "touches": 1,
+     "last_touch": "2026-10-05",
+     "basis": "swing"
+    }
+   ],
    "image": "charts/K-SEMQ.png",
    "returns": {
     "as_of": "2026-10-14",
@@ -73,6 +125,25 @@
     "days": 72,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -11.84039,
+    "ymax": 2.24012
+   },
+   "base_nav": 20.3386,
+   "last_nav": 18.1852,
+   "levels": [
+    {
+     "side": "resistance",
+     "nav": 18.9657,
+     "touches": 1,
+     "last_touch": "2026-09-02",
+     "basis": "swing"
+    }
+   ],
    "image": "charts/SCBGOLDH.png",
    "returns": {
     "as_of": "2026-10-15",
@@ -101,6 +172,32 @@
     "days": 214,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -4.6958,
+    "ymax": 84.0896
+   },
+   "base_nav": 24.0661,
+   "last_nav": 37.0615,
+   "levels": [
+    {
+     "side": "support",
+     "nav": 36.0079,
+     "touches": 2,
+     "last_touch": "2026-06-10",
+     "basis": "swing"
+    },
+    {
+     "side": "resistance",
+     "nav": 38.1685,
+     "touches": 1,
+     "last_touch": "2026-05-14",
+     "basis": "swing"
+    }
+   ],
    "image": "charts/ES-GTECH.png",
    "returns": {
     "as_of": "2026-10-09",
@@ -129,6 +226,32 @@
     "days": 261,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -7.24221,
+    "ymax": 51.69438
+   },
+   "base_nav": 39.6156,
+   "last_nav": 50.3704,
+   "levels": [
+    {
+     "side": "support",
+     "nav": 48.8651,
+     "touches": 2,
+     "last_touch": "2026-09-15",
+     "basis": "swing"
+    },
+    {
+     "side": "resistance",
+     "nav": 53.8691,
+     "touches": 1,
+     "last_touch": "2026-08-17",
+     "basis": "swing"
+    }
+   ],
    "image": "charts/SCBNK225.png",
    "returns": {
     "as_of": "2026-10-15",
@@ -157,6 +280,32 @@
     "days": 243,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -2.53829,
+    "ymax": 24.74658
+   },
+   "base_nav": 16.7152,
+   "last_nav": 18.5385,
+   "levels": [
+    {
+     "side": "support",
+     "nav": 17.8583,
+     "touches": 1,
+     "last_touch": "2026-04-17",
+     "basis": "swing"
+    },
+    {
+     "side": "resistance",
+     "nav": 20.1896,
+     "touches": 1,
+     "last_touch": "2026-08-19",
+     "basis": "swing"
+    }
+   ],
    "image": "charts/KKP-GHC-A.png",
    "returns": {
     "as_of": "2026-10-14",
@@ -185,6 +334,32 @@
     "days": 95,
     "warning": null
    },
+   "axes": {
+    "left": 0.015,
+    "right": 0.9,
+    "bottom": 0.1,
+    "top": 0.97,
+    "ymin": -7.48569,
+    "ymax": 3.16443
+   },
+   "base_nav": 11.0353,
+   "last_nav": 10.4565,
+   "levels": [
+    {
+     "side": "support",
+     "nav": 10.2661,
+     "touches": 1,
+     "last_touch": "2026-10-14",
+     "basis": "low"
+    },
+    {
+     "side": "resistance",
+     "nav": 11.2139,
+     "touches": 1,
+     "last_touch": "2026-09-18",
+     "basis": "high"
+    }
+   ],
    "image": "charts/MPDIVMF.png",
    "returns": {
     "as_of": "2026-10-15",
