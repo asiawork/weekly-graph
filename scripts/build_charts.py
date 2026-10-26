@@ -286,6 +286,7 @@ def main():
             entry["axes"] = draw(f, series, start, OUT / img)
             shown = s0[s0.index >= start]
             entry["base_nav"] = round(float(shown.iloc[0]), 4)    # NAV ที่ 0% บนกราฟ
+            entry["base_date"] = shown.index[0].date().isoformat()  # วันของ NAV เริ่มต้น (อาจเป็นวันทำการก่อนวันแนะนำ)
             entry["last_nav"] = round(float(shown.iloc[-1]), 4)
             entry["levels"] = find_levels(shown)
             entry["image"] = img

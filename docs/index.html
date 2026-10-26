@@ -169,6 +169,14 @@ const fmt = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 const cls = (v) => v == null ? "" : v >= 0 ? "pos" : "neg";
 const thDate = (iso) => { if (!iso) return "–"; const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; };
 
+/* NAV วันเริ่มต้น = NAV ที่ 0% บนกราฟ ถ้าวันแนะนำไม่มี NAV จะเป็นวันทำการก่อนหน้า (บอกวันที่กำกับไว้) */
+const baseDate = (f) => f.base_date || f.recommend_date;
+function startNavText(f) {
+  if (f.base_nav == null) return "";
+  const d = baseDate(f);
+  return ` · NAV วันเริ่มต้น ${f.base_nav.toFixed(4)}` + (d && d !== f.recommend_date ? ` (ณ ${thDate(d)})` : "");
+}
+
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.classList.add("show");
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2200);
@@ -184,7 +192,7 @@ function select(name) {
   $("panel").hidden = false;
   $("title").textContent = f.name;
   const peers = f.peers.length ? " · เทียบกับ " + f.peers.join(", ") : "";
-  $("sub").textContent = `แนะนำเมื่อ ${thDate(f.recommend_date)}` + peers;
+  $("sub").textContent = `แนะนำเมื่อ ${thDate(f.recommend_date)}` + startNavText(f) + peers;
 
   if (f.image) {
     const src = f.image + "?v=" + (f.image_ver || DATA.updated);
@@ -478,11 +486,12 @@ async function downloadImage() {
 }
 
 function renderTable() {
-  const head = "<tr><th>กองทุน</th><th>วันแนะนำ</th>" + COLS.map(c => `<th>${c[1]}</th>`).join("") + "<th>NAV ล่าสุด</th></tr>";
+  const head = "<tr><th>กองทุน</th><th>วันแนะนำ</th>" + COLS.map(c => `<th>${c[1]}</th>`).join("") + "<th>NAV วันเริ่มต้น</th><th>NAV ล่าสุด</th></tr>";
   const rows = DATA.funds.map(f => {
     const r = f.returns || {};
     return `<tr><td><b>${f.name}</b></td><td>${thDate(f.recommend_date)}</td>` +
       COLS.map(([k]) => `<td class="${cls(r[k])}">${fmt(r[k])}</td>`).join("") +
+      `<td>${f.base_nav != null ? f.base_nav.toFixed(4) : "–"} <small>${thDate(baseDate(f))}</small></td>` +
       `<td>${r.nav != null ? r.nav.toFixed(4) : "–"} <small>${thDate(r.as_of)}</small></td></tr>`;
   }).join("");
   $("tbl").innerHTML = head + rows;
