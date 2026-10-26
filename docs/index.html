@@ -33,7 +33,7 @@
   .head { display: flex; justify-content: space-between; align-items: start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
   .head h2 { margin: 0; font-size: 22px; color: var(--navy); }
   .head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
-  .actions { display: flex; gap: 8px; }
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--navy); }
   .btn.primary { background: var(--navy); color: #fff; }
   .btn.primary:hover { background: var(--navy-2); }
@@ -126,6 +126,7 @@
         <div class="sub" id="sub"></div>
       </div>
       <div class="actions">
+        <label class="tgl"><input type="checkbox" id="nameShow"> แสดงชื่อกองบนกราฟ</label>
         <button class="btn primary" id="copy">Copy รูป</button>
         <button class="btn ghost" id="download">ดาวน์โหลด PNG</button>
       </div>
@@ -135,7 +136,7 @@
       <div class="lv-head">
         <div><b>แนวรับ–แนวต้าน</b><span class="state" id="lvState"></span></div>
         <div class="lv-tools">
-          <label class="tgl"><input type="checkbox" id="lvShow" checked> แสดงบนกราฟ</label>
+          <label class="tgl"><input type="checkbox" id="lvShow"> แสดงบนกราฟ</label>
           <button class="btn ghost sm" id="lvReset">ใช้แนวที่ระบบเสนอ</button>
           <button class="btn ghost sm" id="lvClear">ลบทั้งหมด</button>
         </div>
@@ -224,7 +225,10 @@ async function copyImage() {
 /* ───────────── แนวรับ–แนวต้าน ─────────────
    เส้นเก็บเป็นค่า NAV (ไม่ใช่ %) เพื่อให้ยังถูกตำแหน่งเมื่อกราฟสัปดาห์หน้าขยับสเกล
    ตำแหน่งกรอบกราฟ (axes) + ช่วงแกน y มาจาก build_charts.py ใน data.json */
-const LV = { lines: [], show: true, edited: false, hover: null, drag: null, down: null, seq: 0 };
+const LV = { lines: [], show: false, edited: false, hover: null, drag: null, down: null, seq: 0 };
+/* ชื่อกองบนกราฟ: ค่าเริ่มต้น = ซ่อน · ตำแหน่ง/ขนาดเท่าที่ build_charts.py เคยวาด (มุมซ้ายบนกรอบกราฟ, 8.5pt @300dpi) */
+const NAME = { show: false };
+const NAME_FONT = 'bold 35px "DejaVu Sans", Verdana, Arial, sans-serif';
 const LV_COLOR = { res: "#c62828", sup: "#0f8a4b", add: "#1b3560" };
 const LV_FONT = '600 27px "IBM Plex Sans Thai", "DejaVu Sans", sans-serif';
 const lvKey = (name) => "wg-levels:" + name;
@@ -238,16 +242,17 @@ function loadLevels(f) {
   try { saved = JSON.parse(localStorage.getItem(lvKey(f.name)) || "null"); } catch (e) {}
   if (saved && Array.isArray(saved.lines)) {
     LV.lines = saved.lines.filter(l => l.nav > 0).map(l => ({ ...l, id: ++LV.seq }));
-    LV.show = saved.show !== false; LV.edited = true;
+    LV.edited = true;
   } else {
-    LV.lines = autoLines(f); LV.show = true; LV.edited = false;
+    LV.lines = autoLines(f); LV.edited = false;
   }
+  LV.show = false;   // ค่าเริ่มต้น = ไม่แสดงเส้น (เส้นที่ปรับไว้ยังเก็บอยู่ ติ๊ก "แสดงบนกราฟ" เพื่อเปิด)
   LV.hover = LV.drag = null;
 }
 function saveLevels() {
   LV.edited = true;
   const lines = LV.lines.map(({ nav, auto, touches, basis }) => ({ nav, auto, touches, basis }));
-  try { localStorage.setItem(lvKey(current.name), JSON.stringify({ lines, show: LV.show })); } catch (e) {}
+  try { localStorage.setItem(lvKey(current.name), JSON.stringify({ lines })); } catch (e) {}
 }
 
 const sideOf = (nav) => nav >= current.last_nav ? "res" : "sup";
@@ -277,6 +282,20 @@ function pill(ctx, g, y, text, color, away, filled) {
   ctx.fillStyle = filled ? "#fff" : color; ctx.textBaseline = "middle";
   ctx.fillText(text, x + 11, top + h / 2 + 1);
   ctx.restore();
+}
+
+function drawName(ctx, W, H) {
+  if (!NAME.show || !current || !current.axes) return;
+  const g = geo(W, H);
+  ctx.save();
+  ctx.font = NAME_FONT; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "top"; ctx.textAlign = "left";
+  ctx.fillText(current.name, g.x0 + (g.x1 - g.x0) * 0.012, g.yt + (g.yb - g.yt) * 0.025);
+  ctx.restore();
+}
+
+function drawOverlay(ctx, W, H, live, withLevels) {
+  drawName(ctx, W, H);
+  if (withLevels) drawLevels(ctx, W, H, live);
 }
 
 function drawLevels(ctx, W, H, live) {
@@ -314,7 +333,7 @@ function redraw() {
   }
   const ctx = cv.getContext("2d");
   ctx.clearRect(0, 0, cv.width, cv.height);
-  drawLevels(ctx, cv.width, cv.height, true);
+  drawOverlay(ctx, cv.width, cv.height, true, true);
 }
 
 function renderLevels() {
@@ -429,6 +448,8 @@ function setupLevels() {
     toast("กลับไปใช้แนวที่ระบบเสนอแล้ว");
   });
 
+  $("nameShow").addEventListener("change", (e) => { NAME.show = e.target.checked; redraw(); });
+
   if (document.fonts && document.fonts.load) document.fonts.load(LV_FONT).then(redraw).catch(() => {});
 }
 
@@ -441,7 +462,7 @@ async function composeBlob() {
   c.width = img.naturalWidth; c.height = img.naturalHeight;
   const ctx = c.getContext("2d");
   ctx.drawImage(img, 0, 0);
-  if (!$("lv").hidden) drawLevels(ctx, c.width, c.height, false);
+  drawOverlay(ctx, c.width, c.height, false, !$("lv").hidden);
   return new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error("toBlob")), "image/png"));
 }
 

@@ -216,9 +216,8 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     rng = (hi - lo) or 1
     ax.set_ylim(lo - rng * 0.06, hi + rng * 0.18)
 
-    # ชื่อกองมุมซ้ายบน
-    ax.text(0.012, 0.975, fund["name"], transform=ax.transAxes, ha="left", va="top",
-            fontsize=8.5, fontweight="bold", color=NAVY)
+    # ไม่ใส่ชื่อกองในรูป — หน้าเว็บวาดชื่อกองทับให้เองเมื่อติ๊ก "แสดงชื่อกองบนกราฟ"
+    # (ตำแหน่ง/ขนาดเดิม: มุมซ้ายบนของกรอบกราฟ 0.012, 0.975 · 8.5pt ตัวหนา สี NAVY)
 
     # tag ค่าล่าสุดติดแกนขวา
     for v, color, z in tags:
