@@ -75,13 +75,20 @@ def pct(a, b):
     return None if a is None or b is None or b == 0 else (a / b - 1) * 100
 
 
+def start_date(s: pd.Series, rec):
+    """วันเริ่มต้น = วันแรกที่มี NAV หลังวันแนะนำ (ไม่รวมวันแนะนำ)"""
+    after = s[s.index > pd.Timestamp(rec)]
+    return after.index[0] if len(after) else s.index[-1]
+
+
 def returns(s: pd.Series, rec):
     last_d = s.index[-1]
     last = float(s.iloc[-1])
     out = {"as_of": last_d.date().isoformat(), "nav": round(last, 4)}
     for k, days in [("1W", 7), ("1M", 30), ("3M", 91), ("6M", 182), ("1Y", 365)]:
         out[k] = pct(last, nav_on_or_before(s, last_d - timedelta(days=days)))
-    out["since_rec"] = pct(last, nav_on_or_before(s, rec)) if rec else None
+    # ตั้งแต่แนะนำ: เทียบกับ NAV วันเริ่มต้น (วันทำการถัดจากวันแนะนำ) ให้ตรงกับ 0% บนกราฟ
+    out["since_rec"] = pct(last, float(s[start_date(s, rec)])) if rec else None
     return out
 
 
@@ -275,11 +282,11 @@ def main():
             "info": report.get("funds", {}).get(f["name"], {}),
         }
         if f["name"] in series:
-            # เริ่มกราฟที่ NAV วันแนะนำ (หรือวันทำการก่อนหน้าถ้าวันนั้นไม่มี NAV)
+            # เริ่มกราฟที่ NAV วันทำการถัดจากวันแนะนำ (แนะนำ 11/11 → เริ่ม 12/11)
+            # ถ้ายังไม่มี NAV หลังวันแนะนำ (เพิ่งแนะนำ) ใช้ NAV ล่าสุดที่มีไปก่อน
             s0 = series[f["name"]]
             if f["rec"]:
-                before = s0[s0.index <= pd.Timestamp(f["rec"])]
-                start = before.index[-1] if len(before) else s0.index[0]
+                start = start_date(s0, f["rec"])
             else:
                 start = max(pd.Timestamp(today - timedelta(days=LOOKBACK_DAYS)), s0.index[0])
             img = f"charts/{slug(f['name'])}.png"
