@@ -44,7 +44,7 @@
     }
    ],
    "image": "charts/KKP-TECH-H.png",
-   "image_ver": "8c66574247",
+   "image_ver": "daddbffd94",
    "returns": {
     "as_of": "2026-10-21",
     "nav": 26.5428,
@@ -99,7 +99,7 @@
     }
    ],
    "image": "charts/K-SEMQ.png",
-   "image_ver": "926d65c8cb",
+   "image_ver": "7ad7bb6843",
    "returns": {
     "as_of": "2026-10-21",
     "nav": 17.2833,
@@ -147,7 +147,7 @@
     }
    ],
    "image": "charts/SCBGOLDH.png",
-   "image_ver": "669709dbf6",
+   "image_ver": "a1c9fe52a2",
    "returns": {
     "as_of": "2026-10-22",
     "nav": 17.8713,
@@ -202,7 +202,7 @@
     }
    ],
    "image": "charts/ES-GTECH.png",
-   "image_ver": "9b0bab0498",
+   "image_ver": "888fc74b65",
    "returns": {
     "as_of": "2026-10-20",
     "nav": 33.0452,
@@ -257,7 +257,7 @@
     }
    ],
    "image": "charts/SCBNK225.png",
-   "image_ver": "ef95edd7df",
+   "image_ver": "d5fd3a8237",
    "returns": {
     "as_of": "2026-10-22",
     "nav": 49.1349,
@@ -312,7 +312,7 @@
     }
    ],
    "image": "charts/KKP-GHC-A.png",
-   "image_ver": "1b18803f6d",
+   "image_ver": "0b4dabf196",
    "returns": {
     "as_of": "2026-10-21",
     "nav": 19.1203,
@@ -367,7 +367,7 @@
     }
    ],
    "image": "charts/MPDIVMF.png",
-   "image_ver": "dab0c7c1d5",
+   "image_ver": "cb910b08c6",
    "returns": {
     "as_of": "2026-10-22",
     "nav": 10.5715,
