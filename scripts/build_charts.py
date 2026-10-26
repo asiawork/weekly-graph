@@ -76,8 +76,8 @@ def pct(a, b):
 
 
 def start_date(s: pd.Series, rec):
-    """วันเริ่มต้น = วันแรกที่มี NAV หลังวันแนะนำ (ไม่รวมวันแนะนำ)"""
-    after = s[s.index > pd.Timestamp(rec)]
+    """วันเริ่มต้น = วันแนะนำ ถ้าวันนั้นไม่มี NAV ใช้วันทำการถัดไป (แนะนำ 11/11 ไม่มี NAV → เริ่ม 12/11)"""
+    after = s[s.index >= pd.Timestamp(rec)]
     return after.index[0] if len(after) else s.index[-1]
 
 
@@ -87,7 +87,7 @@ def returns(s: pd.Series, rec):
     out = {"as_of": last_d.date().isoformat(), "nav": round(last, 4)}
     for k, days in [("1W", 7), ("1M", 30), ("3M", 91), ("6M", 182), ("1Y", 365)]:
         out[k] = pct(last, nav_on_or_before(s, last_d - timedelta(days=days)))
-    # ตั้งแต่แนะนำ: เทียบกับ NAV วันเริ่มต้น (วันทำการถัดจากวันแนะนำ) ให้ตรงกับ 0% บนกราฟ
+    # ตั้งแต่แนะนำ: เทียบกับ NAV วันเริ่มต้น ให้ตรงกับ 0% บนกราฟ
     out["since_rec"] = pct(last, float(s[start_date(s, rec)])) if rec else None
     return out
 
@@ -282,8 +282,8 @@ def main():
             "info": report.get("funds", {}).get(f["name"], {}),
         }
         if f["name"] in series:
-            # เริ่มกราฟที่ NAV วันทำการถัดจากวันแนะนำ (แนะนำ 11/11 → เริ่ม 12/11)
-            # ถ้ายังไม่มี NAV หลังวันแนะนำ (เพิ่งแนะนำ) ใช้ NAV ล่าสุดที่มีไปก่อน
+            # เริ่มกราฟที่ NAV วันแนะนำ ถ้าวันนั้นไม่มี NAV ใช้วันทำการถัดไป
+            # ถ้ายังไม่มี NAV ตั้งแต่วันแนะนำ (เพิ่งแนะนำ) ใช้ NAV ล่าสุดที่มีไปก่อน
             s0 = series[f["name"]]
             if f["rec"]:
                 start = start_date(s0, f["rec"])

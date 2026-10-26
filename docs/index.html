@@ -169,11 +169,12 @@ const fmt = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 const cls = (v) => v == null ? "" : v >= 0 ? "pos" : "neg";
 const thDate = (iso) => { if (!iso) return "–"; const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; };
 
-/* NAV วันเริ่มต้น = NAV ที่ 0% บนกราฟ = วันทำการถัดจากวันแนะนำ */
+/* NAV วันเริ่มต้น = NAV ที่ 0% บนกราฟ ถ้าวันแนะนำไม่มี NAV จะเป็นวันทำการถัดไป (บอกวันที่กำกับไว้) */
 const baseDate = (f) => f.base_date || f.recommend_date;
 function startNavText(f) {
   if (f.base_nav == null) return "";
-  return ` · NAV วันเริ่มต้น ${f.base_nav.toFixed(4)} (ณ ${thDate(baseDate(f))})`;
+  const d = baseDate(f);
+  return ` · NAV วันเริ่มต้น ${f.base_nav.toFixed(4)}` + (d && d !== f.recommend_date ? ` (ณ ${thDate(d)})` : "");
 }
 
 function toast(msg) {
