@@ -187,7 +187,7 @@ function select(name) {
   $("sub").textContent = `แนะนำเมื่อ ${thDate(f.recommend_date)}` + peers;
 
   if (f.image) {
-    const src = f.image + "?v=" + DATA.updated;
+    const src = f.image + "?v=" + (f.image_ver || DATA.updated);
     $("img").src = src; $("img").alt = "กราฟ NAV " + f.name;
     $("copy").disabled = false; $("download").disabled = false; $("img").parentElement.hidden = false;
   } else {

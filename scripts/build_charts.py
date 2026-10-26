@@ -6,6 +6,7 @@
 """
 
 import csv
+import hashlib
 import json
 import os
 import re
@@ -288,6 +289,8 @@ def main():
             entry["last_nav"] = round(float(shown.iloc[-1]), 4)
             entry["levels"] = find_levels(shown)
             entry["image"] = img
+            # เวอร์ชันรูปจากเนื้อไฟล์ — รูปเปลี่ยนเมื่อไร URL เปลี่ยน เบราว์เซอร์จะไม่ใช้รูปเก่าจาก cache
+            entry["image_ver"] = hashlib.md5((OUT / img).read_bytes()).hexdigest()[:10]
             entry["returns"] = returns(series[f["name"]], f["rec"])
             print(f"chart {f['name']}: since rec {fmt_pct(entry['returns']['since_rec'])}")
         out["funds"].append(entry)
