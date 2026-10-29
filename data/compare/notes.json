@@ -1,19 +1,7 @@
 {
- "ASP-DGOV-SSF": "ก่อน 2024-12-09 ใช้ NAV ของ class ASP-DGOV-I (class นี้เริ่มวันนั้น)",
  "K-CASH-A": "ก่อน 2025-12-11 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
- "K-CASH-I": "ก่อน 2026-01-08 ใช้ NAV ของ class K-CASH-A (class นี้เริ่มวันนั้น)",
  "KTSV-A": "ก่อน 2025-06-26 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
- "KTSV-KTB": "ก่อน 2025-07-08 ใช้ NAV ของ class KTSV-A (class นี้เริ่มวันนั้น)",
- "KKP CASH-F": "ก่อน 2024-11-22 ใช้ NAV ของ class KKP CASH (class นี้เริ่มวันนั้น)",
- "KKP CASH-SSF": "ก่อน 2024-11-22 ใช้ NAV ของ class KKP CASH (class นี้เริ่มวันนั้น)",
  "K-ESGSI-A": "ก่อน 2025-07-02 ใช้ NAV ของ class K-ESGSI-ThaiESG (class นี้เริ่มวันนั้น)",
- "K-SF-Z": "ก่อน 2025-04-17 ใช้ NAV ของ class K-SF-A (class นี้เริ่มวันนั้น)",
  "K-SFPLUS-A": "ก่อน 2025-04-16 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
- "K-SFPLUS-I": "ก่อน 2026-03-26 ใช้ NAV ของ class K-SFPLUS-A (class นี้เริ่มวันนั้น)",
- "K-SFPLUS-Z": "ก่อน 2025-04-17 ใช้ NAV ของ class K-SFPLUS-A (class นี้เริ่มวันนั้น)",
- "SCBFIXEDR": "ก่อน 2026-06-17 ใช้ NAV ของ class SCBFIXEDA (class นี้เริ่มวันนั้น)",
- "SCBFPR": "ก่อน 2026-06-17 ใช้ NAV ของ class SCBFP (class นี้เริ่มวันนั้น)",
- "SCBGOFIX(IA)": "ก่อน 2026-08-17 ใช้ NAV ของ class SCBGOFIX(A) (class นี้เริ่มวันนั้น)",
- "SCBRF(R)": "ก่อน 2026-07-27 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
  "SMARTA": "ก่อน 2025-09-24 ใช้ NAV ของ class SMARTMF (class นี้เริ่มวันนั้น)"
 }
