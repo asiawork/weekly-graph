@@ -1,0 +1,58 @@
+name: Compare data
+
+on:
+  schedule:
+    # ทุกวันจันทร์ 06:40 เวลาไทย (= อาทิตย์ 23:40 UTC) หลังรอบกราฟ weekly
+    - cron: "40 23 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "update = ดึงข้อมูลหน้าเปรียบเทียบ / selftest = พิมพ์ profile ดิบของ SEC ออกมาดู (ไม่บันทึก)"
+        type: choice
+        options: [update, selftest]
+        default: update
+
+permissions:
+  contents: write
+
+# ใช้กลุ่มเดียวกับ Weekly charts เพื่อไม่ให้สอง workflow push ชนกัน
+concurrency:
+  group: weekly-charts
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install requests
+
+      - name: Self-test
+        if: ${{ github.event.inputs.mode == 'selftest' }}
+        env:
+          SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+        run: python scripts/fetch_compare.py --selftest
+
+      - name: Fetch compare data from SEC
+        if: ${{ github.event.inputs.mode != 'selftest' }}
+        env:
+          SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+        run: python scripts/fetch_compare.py
+
+      - name: Commit
+        if: ${{ github.event.inputs.mode != 'selftest' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/compare docs/compare
+          if ! git diff --staged --quiet; then
+            git commit -m "Compare data $(TZ=Asia/Bangkok date '+%Y-%m-%d')"
+            git pull --rebase -X theirs origin main
+            git push
+          fi

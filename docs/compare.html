@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เปรียบเทียบกองทุน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1b3560; --navy-2: #24467d; --red: #d0273e;
+    --bg: #f4f6f9; --card: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --pos: #0f8a4b; --neg: #c62828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: "IBM Plex Sans Thai", system-ui, sans-serif; font-size: 15px; }
+  header { background: var(--navy); color: #fff; padding: 22px 16px 26px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+  header .wrap { padding: 0; display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
+  header a { color: #fff; opacity: .85; font-size: 13px; }
+  header .asof { background: rgba(255,255,255,.12); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; margin-top: 20px; align-items: start; }
+  .card { background: var(--card); border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 16px; }
+
+  /* เลือกกอง */
+  .side h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
+  .side input[type=search] { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; }
+  .grp { margin-top: 12px; }
+  .grp-name { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
+  .opt { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .opt:hover { background: var(--bg); }
+  .opt input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
+  .opt .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .opt .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opt .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
+  .opt .x:hover { color: var(--neg); }
+  .count { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  .upload { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .upload p { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+  .upload input[type=text] { width: 100%; font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; margin-bottom: 8px; }
+
+  /* กราฟ */
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .head input { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; min-width: 0; flex: 1 1 260px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--navy); white-space: nowrap; }
+  .btn.primary { background: var(--navy); color: #fff; }
+  .btn.primary:hover { background: var(--navy-2); }
+  .btn.ghost { background: #fff; color: var(--navy); }
+  .btn.sm { padding: 5px 11px; font-size: 13px; border-radius: 8px; }
+  .btn.done { background: var(--pos); border-color: var(--pos); color: #fff; }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  .range { display: flex; gap: 10px 16px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; font-weight: 500; border: 0; border-left: 1px solid var(--line); background: #fff; color: var(--ink); padding: 6px 11px; cursor: pointer; }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed=true] { background: var(--navy); color: #fff; }
+  .dates { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+  .dates input { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; color: var(--ink); }
+
+  .slider { position: relative; height: 26px; margin: 2px 6px 10px; }
+  .slider .track { position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: var(--line); }
+  .slider .fill { position: absolute; top: 11px; height: 4px; border-radius: 2px; background: var(--navy); }
+  .slider input { position: absolute; left: 0; width: 100%; top: 0; height: 26px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+  .slider input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--navy); cursor: grab; }
+  .slider input::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--navy); cursor: grab; }
+  .slider input::-moz-range-track { background: none; }
+
+  .chart { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+  .chart canvas { display: block; width: 100%; height: auto; }
+  .tt { position: absolute; pointer-events: none; background: rgba(31,41,55,.94); color: #fff; border-radius: 8px; padding: 7px 10px; font-size: 12.5px; white-space: nowrap; display: none; z-index: 2; }
+  .tt b { font-weight: 600; }
+  .tt .r { display: flex; gap: 8px; align-items: center; font-variant-numeric: tabular-nums; }
+  .tt .r i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .empty { padding: 60px 16px; text-align: center; color: var(--muted); }
+  .tip { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .tip b { color: var(--ink); }
+
+  h3 { margin: 22px 0 10px; font-size: 17px; color: var(--navy); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  h3 small { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
+  thead th { background: var(--navy); color: #fff; font-weight: 600; font-size: 13px; white-space: nowrap; }
+  thead th i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; border: 1.5px solid #fff; }
+  tbody th { font-weight: 500; color: var(--muted); white-space: nowrap; width: 1%; }
+  td.num { white-space: nowrap; }
+  .pos { color: var(--pos); } .neg { color: var(--neg); }
+  details { margin-top: 10px; font-size: 13px; }
+  details summary { cursor: pointer; color: var(--navy); font-weight: 500; }
+  details .raw { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; margin-top: 8px; }
+  details .raw div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  details .raw b { color: var(--navy); }
+  details .raw dl { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+  details .raw dt { color: var(--muted); } details .raw dd { margin: 0; word-break: break-word; }
+
+  .notice { margin-top: 16px; border-radius: 10px; padding: 10px 12px; font-size: 13px; background: #fff7e6; color: #7a4b00; border: 1px solid #f3d9a4; }
+  .notice ul { margin: 4px 0 0; padding-left: 18px; }
+  footer { color: var(--muted); font-size: 12px; padding: 28px 0 40px; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
+           background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: .2s; pointer-events: none; z-index: 5; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+
+  #report { display: none; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    body { background: #fff; font-size: 11pt; }
+    header, .layout, footer, .toast, .notice { display: none !important; }
+    #report { display: block; }
+    #report h1 { margin: 0; color: var(--navy); font-size: 18pt; }
+    #report .meta { color: var(--muted); font-size: 10pt; margin: 2px 0 10px; }
+    #report img { width: 100%; border: 1px solid var(--line); }
+    #report table { margin-top: 10px; page-break-inside: avoid; }
+    #report th, #report td { font-size: 9pt; padding: 4px 6px; }
+    #report thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #report .foot { color: var(--muted); font-size: 8.5pt; margin-top: 8px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1>เปรียบเทียบผลตอบแทนกองทุน</h1>
+      <p>เลือกกองที่จะเทียบ เลื่อนช่วงเวลา แล้วกด Copy รูปไปวางใน PowerPoint · <a href="index.html">ไปหน้า Top Funds Weekly Charts</a></p>
+    </div>
+    <div class="asof" id="asof">กำลังโหลด…</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <aside class="card side">
+      <h2>เลือกกองทุน</h2>
+      <input type="search" id="q" placeholder="ค้นหาชื่อกอง / บลจ.">
+      <div id="list"></div>
+      <div class="count" id="count"></div>
+      <div class="upload">
+        <h2>เพิ่มเส้นจากไฟล์ CSV</h2>
+        <p>เช่น NAV ของ FIXEDSP · ต้องมีคอลัมน์วันที่ และค่า NAV / index / % สะสม · ไฟล์อยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ขึ้น GitHub</p>
+        <input type="text" id="csvName" placeholder="ชื่อเส้น (ไม่ใส่ = ใช้ชื่อไฟล์)">
+        <input type="file" id="csvFile" accept=".csv,.txt,text/csv" hidden>
+        <button class="btn ghost sm" id="csvBtn">เลือกไฟล์ CSV</button>
+      </div>
+    </aside>
+
+    <section>
+      <div class="card">
+        <div class="head">
+          <input id="title" placeholder="ชื่อกราฟบนรูป (ไม่ใส่ก็ได้)" aria-label="ชื่อกราฟบนรูป">
+          <div class="actions">
+            <button class="btn primary" id="copy">Copy รูป</button>
+            <button class="btn ghost" id="download">ดาวน์โหลด PNG</button>
+            <button class="btn ghost" id="print">ดาวน์โหลดรายงาน (PDF)</button>
+          </div>
+        </div>
+        <div class="range">
+          <div class="seg" id="quick" role="group" aria-label="ช่วงเวลา">
+            <button data-q="1M">1M</button><button data-q="3M">3M</button><button data-q="6M">6M</button><button data-q="YTD">YTD</button><button data-q="1Y">1Y</button><button data-q="3Y">3Y</button><button data-q="ALL">ทั้งหมด</button>
+          </div>
+          <div class="dates"><input type="date" id="dFrom" aria-label="วันเริ่ม"> ถึง <input type="date" id="dTo" aria-label="วันสิ้นสุด"></div>
+        </div>
+        <div class="slider" id="slider"><div class="track"></div><div class="fill" id="fill"></div>
+          <input type="range" id="sA" min="0" max="1" value="0" aria-label="วันเริ่ม">
+          <input type="range" id="sB" min="0" max="1" value="1" aria-label="วันสิ้นสุด"></div>
+        <div class="chart" id="chartBox"><canvas id="cv" width="1200" height="560"></canvas><div class="tt" id="tt"></div></div>
+        <div class="empty" id="empty" hidden>เลือกกองทุนทางซ้ายอย่างน้อย 1 กอง</div>
+        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก (กองที่เริ่มทีหลังจะนับจากวันแรกที่มี NAV) · วางใน PowerPoint: <b>Ctrl+V</b> หรือ <b>คลิกขวาที่รูปเก่า → Change Picture → From Clipboard</b></div>
+      </div>
+
+      <h3>ข้อมูลเบื้องต้น <small id="tblNote"></small><button class="btn ghost sm" id="copyTable">Copy ตาราง</button></h3>
+      <div class="tbl-wrap card" style="padding:0"><table id="tbl"></table></div>
+      <details id="rawBox"><summary>ข้อมูลทั้งหมดจาก SEC ของกองที่เลือก</summary><div class="raw" id="raw"></div></details>
+      <div class="notice" id="notice" hidden></div>
+    </section>
+  </div>
+
+  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · แก้รายชื่อกองได้ที่ไฟล์ compare_funds.csv ใน repo · เส้นจากไฟล์ CSV เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น</footer>
+</main>
+
+<div id="report">
+  <h1 id="rTitle"></h1>
+  <div class="meta" id="rMeta"></div>
+  <img id="rImg" alt="">
+  <div id="rTbl"></div>
+  <div class="foot">ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย · ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5", "#2f9e5b", "#7a8794"];
+const MAX_SEL = PALETTE.length;
+const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const STORE = "compare-custom-v1";
+const W = 1200, H = 560, FONT = '"IBM Plex Sans Thai", system-ui, sans-serif';
+
+let DATA = { funds: [], missing: {} };
+let CUSTOM = [];          // เส้นจาก CSV
+let selected = [];        // ชื่อกองตามลำดับที่เลือก (ลำดับ = สี)
+let ALLD = [];            // วันที่ทั้งหมด (ISO) เรียงแล้ว
+let range = { s: null, e: null, q: "1Y" };
+let layout = null;        // ไว้ใช้กับ tooltip
+
+/* ---------- utils */
+const thDate = (iso) => { if (!iso) return "–"; const [y, m, d] = iso.split("-"); return `${+d} ${TH_MON[+m - 1]} ${(+y + 543) % 100}`; };
+const pct = (v, dp = 2) => v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : "") + v.toFixed(dp) + "%";
+const cls = (v) => v == null || !isFinite(v) ? "" : v >= 0 ? "pos" : "neg";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const dnum = (iso) => Date.parse(iso + "T00:00:00Z") / 864e5;
+const isoOf = (n) => new Date(n * 864e5).toISOString().slice(0, 10);
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2400); }
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { return []; } },
+  set(v) { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (e) {} },
+};
+
+const allSeries = () => [...CUSTOM, ...DATA.funds];
+const byName = (n) => allSeries().find(f => f.name === n);
+const colorOf = (n) => PALETTE[selected.indexOf(n) % PALETTE.length];
+
+/* ---------- CSV */
+function parseDateCell(s) {
+  s = String(s).trim().replace(/^"|"$/g, "");
+  if (!s) return null;
+  if (/^\d{5}(\.\d+)?$/.test(s)) { const n = Math.floor(+s); if (n > 20000 && n < 80000) return isoOf(n - 25569); } // Excel serial
+  let y, m, d, x;
+  if ((x = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/))) { y = +x[1]; m = +x[2]; d = +x[3]; }
+  else if ((x = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/))) { d = +x[1]; m = +x[2]; y = +x[3]; }
+  else if ((x = s.match(/^(\d{1,2})[- ]([A-Za-z]{3})[A-Za-z]*[- ](\d{2,4})/))) {
+    d = +x[1]; m = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(x[2].toLowerCase()) + 1; y = +x[3];
+    if (!m) return null;
+  } else return null;
+  if (y < 100) { const nowYY = new Date().getFullYear() % 100; y = y > nowYY + 5 ? 2500 + y - 543 : 2000 + y; }
+  if (y > 2400) y -= 543;
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+function parseCSV(text) {
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error("ไฟล์มีข้อมูลน้อยเกินไป");
+  const delim = [",", ";", "\t"].sort((a, b) => lines[0].split(b).length - lines[0].split(a).length)[0];
+  const split = (l) => l.split(delim).map(c => c.trim().replace(/^"|"$/g, ""));
+  const num = (c) => { const v = parseFloat(String(c).replace(/[,%\s]/g, "")); return isFinite(v) ? v : null; };
+  let rows = lines.map(split), header = null;
+  if (!parseDateCell(rows[0][0]) && rows[0].some(c => num(c) == null)) header = rows.shift();
+  const ncol = Math.max(...rows.slice(0, 20).map(r => r.length));
+  let dc = -1;
+  for (let c = 0; c < ncol && dc < 0; c++) if (rows.slice(0, 20).filter(r => parseDateCell(r[c] ?? "")).length >= Math.min(5, rows.length) * 0.8) dc = c;
+  if (dc < 0) throw new Error("หาคอลัมน์วันที่ไม่เจอ");
+  let vc = -1;
+  if (header) vc = header.findIndex((h, i) => i !== dc && /nav|index|value|ราคา|มูลค่า|%|return|ผลตอบแทน/i.test(h));
+  if (vc < 0) for (let c = ncol - 1; c >= 0; c--) if (c !== dc && rows.slice(0, 20).filter(r => num(r[c] ?? "") != null).length >= Math.min(5, rows.length) * 0.8) { vc = c; break; }
+  if (vc < 0) throw new Error("หาคอลัมน์ตัวเลขไม่เจอ");
+  const pts = new Map();
+  for (const r of rows) { const d = parseDateCell(r[dc] ?? ""), v = num(r[vc] ?? ""); if (d && v != null) pts.set(d, v); }
+  const d = [...pts.keys()].sort();
+  let v = d.map(k => pts.get(k));
+  if (d.length < 2) throw new Error("อ่านได้น้อยกว่า 2 วัน");
+  const hdr = header ? header[vc] : "";
+  const isPct = /%|return|ผลตอบแทน|change/i.test(hdr) || Math.abs(v[0]) < 1e-9 || v.some(x => x <= 0);
+  if (isPct) v = v.map(x => 100 * (1 + x / 100));
+  return { d, v, mode: isPct ? "% สะสม" : "NAV/index" };
+}
+async function onCSV(file) {
+  try {
+    const p = parseCSV(await file.text());
+    const name = ($("csvName").value.trim() || file.name.replace(/\.[^.]+$/, "")).slice(0, 40);
+    CUSTOM = CUSTOM.filter(c => c.name !== name);
+    CUSTOM.unshift({ name, group: "จากไฟล์ CSV", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
+    store.set(CUSTOM.map(({ name, d, v, info }) => ({ name, d, v, info })));
+    selected = [name, ...selected.filter(n => n !== name)].slice(0, MAX_SEL);
+    $("csvName").value = "";
+    rebuildDates(); renderList(); update();
+    toast(`เพิ่ม ${name} แล้ว (${p.d.length} วัน, อ่านเป็น ${p.mode})`);
+  } catch (e) { toast("อ่านไฟล์ไม่ได้: " + e.message); }
+}
+
+/* ---------- เลือกกอง */
+function renderList() {
+  const q = $("q").value.trim().toLowerCase();
+  const groups = new Map();
+  for (const f of allSeries()) {
+    const hay = (f.name + " " + (f.info?.proj_name_th || "") + " " + (f.info?.comp_name_th || "")).toLowerCase();
+    if (q && !hay.includes(q)) continue;
+    if (!groups.has(f.group)) groups.set(f.group, []);
+    groups.get(f.group).push(f);
+  }
+  $("list").innerHTML = [...groups].map(([g, fs]) =>
+    `<div class="grp"><div class="grp-name">${esc(g)}</div>` + fs.map(f => {
+      const on = selected.includes(f.name);
+      return `<label class="opt" title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
+        `<span class="sw" style="background:${on ? colorOf(f.name) : "transparent"}"></span><span class="nm">${esc(f.name)}</span>` +
+        (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
+    }).join("") + `</div>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
+  $("count").textContent = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง`;
+}
+$("list").addEventListener("change", (e) => {
+  const n = e.target.dataset.n; if (!n) return;
+  if (e.target.checked) {
+    if (selected.length >= MAX_SEL) { e.target.checked = false; toast(`เลือกได้สูงสุด ${MAX_SEL} กอง`); return; }
+    selected.push(n);
+  } else selected = selected.filter(x => x !== n);
+  renderList(); update();
+});
+$("list").addEventListener("click", (e) => {
+  const n = e.target.dataset.del; if (!n) return;
+  e.preventDefault();
+  CUSTOM = CUSTOM.filter(c => c.name !== n);
+  store.set(CUSTOM.map(({ name, d, v, info }) => ({ name, d, v, info })));
+  selected = selected.filter(x => x !== n);
+  rebuildDates(); renderList(); update();
+});
+$("q").addEventListener("input", renderList);
+$("csvBtn").onclick = () => $("csvFile").click();
+$("csvFile").onchange = (e) => { if (e.target.files[0]) onCSV(e.target.files[0]); e.target.value = ""; };
+
+/* ---------- ช่วงเวลา */
+function rebuildDates() {
+  const set = new Set();
+  for (const f of allSeries()) f.d.forEach(x => set.add(x));
+  ALLD = [...set].sort();
+  $("sA").max = $("sB").max = Math.max(ALLD.length - 1, 1);
+  if (ALLD.length) { $("dFrom").min = $("dTo").min = ALLD[0]; $("dFrom").max = $("dTo").max = ALLD.at(-1); }
+  applyQuick(range.q || null, true);
+}
+function idxOf(iso) { let lo = 0, hi = ALLD.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (ALLD[m] < iso) lo = m + 1; else hi = m; } return lo; }
+function applyQuick(q, silent) {
+  if (!ALLD.length) return;
+  const end = ALLD.at(-1);
+  if (q) {
+    const e = new Date(end + "T00:00:00Z"); let s;
+    if (q === "ALL") s = ALLD[0];
+    else if (q === "YTD") s = `${end.slice(0, 4)}-01-01`;
+    else { const n = parseInt(q), u = q.slice(-1); const t = new Date(e); if (u === "M") t.setUTCMonth(t.getUTCMonth() - n); else t.setUTCFullYear(t.getUTCFullYear() - n); s = t.toISOString().slice(0, 10); }
+    range = { s: ALLD[idxOf(s)], e: end, q };
+  } else {
+    range.s = ALLD[idxOf(range.s || ALLD[0])]; range.e = ALLD[Math.min(idxOf(range.e || end), ALLD.length - 1)];
+  }
+  if (!silent) update();
+}
+function syncRangeUI() {
+  if (!ALLD.length) return;
+  const a = idxOf(range.s), b = idxOf(range.e), n = Math.max(ALLD.length - 1, 1);
+  $("sA").value = a; $("sB").value = b;
+  $("fill").style.left = (a / n * 100) + "%"; $("fill").style.width = ((b - a) / n * 100) + "%";
+  $("dFrom").value = range.s; $("dTo").value = range.e;
+  document.querySelectorAll("#quick button").forEach(x => x.setAttribute("aria-pressed", x.dataset.q === range.q));
+}
+$("quick").onclick = (e) => { const q = e.target.dataset.q; if (q) applyQuick(q); };
+function fromSlider(which) {
+  let a = +$("sA").value, b = +$("sB").value;
+  if (a > b - 1) { if (which === "a") a = b - 1; else b = a + 1; }
+  a = Math.max(0, a); b = Math.min(ALLD.length - 1, b);
+  range = { s: ALLD[a], e: ALLD[b], q: null }; update();
+}
+$("sA").oninput = () => fromSlider("a"); $("sB").oninput = () => fromSlider("b");
+$("dFrom").onchange = () => { if ($("dFrom").value) { range = { s: $("dFrom").value, e: range.e, q: null }; applyQuick(null); } };
+$("dTo").onchange = () => { if ($("dTo").value) { range = { s: range.s, e: $("dTo").value, q: null }; applyQuick(null); } };
+
+/* ---------- คำนวณ */
+function slice(f) {
+  const out = [];
+  for (let i = 0; i < f.d.length; i++) if (f.d[i] >= range.s && f.d[i] <= range.e) out.push([f.d[i], f.v[i]]);
+  return out;
+}
+function stats(pts) {
+  if (pts.length < 2) return null;
+  const b = pts[0][1], last = pts.at(-1)[1], ret = (last / b - 1) * 100;
+  const days = dnum(pts.at(-1)[0]) - dnum(pts[0][0]);
+  const ann = days >= 28 ? (Math.pow(last / b, 365 / days) - 1) * 100 : null;
+  let peak = -Infinity, mdd = 0;
+  for (const [, v] of pts) { peak = Math.max(peak, v); mdd = Math.min(mdd, (v / peak - 1) * 100); }
+  return { ret, ann, mdd, start: pts[0][0], end: pts.at(-1)[0], base: b, last, n: pts.length };
+}
+
+/* ---------- วาดกราฟ */
+function niceStep(span, target) {
+  const raw = span / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10;
+}
+function draw(ctx, opts = {}) {
+  const title = $("title").value.trim();
+  const ser = selected.map(n => byName(n)).filter(Boolean).map(f => {
+    const pts = slice(f); const b = pts[0]?.[1];
+    return { name: f.name, color: colorOf(f.name), pts: pts.map(([d, v]) => [dnum(d), (v / b - 1) * 100]) };
+  }).filter(s => s.pts.length >= 2);
+
+  ctx.save();
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  const L = 92, R = 140, T = title ? 70 : 30;
+  const legendRows = Math.ceil(ser.length / 5);
+  const B = 62 + 30 * Math.max(legendRows, 1);
+  const pw = W - L - R, ph = H - T - B;
+  if (title) { ctx.font = `600 26px ${FONT}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
+  if (!ser.length) { ctx.restore(); layout = null; return; }
+
+  const x0 = dnum(range.s), x1 = Math.max(dnum(range.e), x0 + 1);
+  let y0 = Math.min(0, ...ser.flatMap(s => s.pts.map(p => p[1]))), y1 = Math.max(0, ...ser.flatMap(s => s.pts.map(p => p[1])));
+  if (y1 - y0 < 0.05) { y1 += 0.05; }
+  const pad = (y1 - y0) * 0.06; y1 += pad; if (y0 < 0) y0 -= pad;
+  const step = niceStep(y1 - y0, 6);
+  y0 = Math.floor(y0 / step) * step; y1 = Math.ceil(y1 / step) * step;
+  const X = (d) => L + (d - x0) / (x1 - x0) * pw;
+  const Y = (v) => T + (y1 - v) / (y1 - y0) * ph;
+  layout = { X, Y, x0, x1, L, T, pw, ph, ser };
+
+  // แกน Y
+  const dp = step < 0.1 ? 2 : step < 1 ? 1 : 0;
+  ctx.font = `15px ${FONT}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let v = y0; v <= y1 + step / 2; v += step) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = Math.abs(v) < step / 2 ? "#9aa3af" : "#eceff3"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+    ctx.fillStyle = "#6b7280"; ctx.fillText((Math.abs(v) < step / 2 ? 0 : v).toFixed(dp) + "%", L - 10, y);
+  }
+  ctx.save(); ctx.translate(16, T + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = "#6b7280"; ctx.font = `14px ${FONT}`; ctx.fillText("% NAV Change", 0, 0); ctx.restore();
+
+  // แกน X: เลือกระยะเดือนให้ได้ราว 6–12 ป้าย
+  const months = (x1 - x0) / 30.44;
+  const every = [1, 2, 3, 6, 12].find(k => months / k <= 12) || 12;
+  const sd = new Date(x0 * 864e5), ticks = [];
+  let t = new Date(Date.UTC(sd.getUTCFullYear(), sd.getUTCMonth() + 1, 1));
+  while (dnum(t.toISOString().slice(0, 10)) <= x1) { if (t.getUTCMonth() % every === 0 || every === 1) ticks.push(t.toISOString().slice(0, 10)); t = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1)); }
+  if (months < 1.5) { ticks.length = 0; for (let d = Math.ceil(x0); d <= x1; d += 7) ticks.push(isoOf(d)); }
+  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = `15px ${FONT}`;
+  for (const iso of ticks) {
+    const x = Math.round(X(dnum(iso))) + 0.5;
+    ctx.strokeStyle = "#f2f4f7"; ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
+    ctx.strokeStyle = "#9aa3af"; ctx.beginPath(); ctx.moveTo(x, T + ph); ctx.lineTo(x, T + ph + 5); ctx.stroke();
+    const [yy, mm, dd] = iso.split("-");
+    ctx.fillStyle = "#6b7280"; ctx.fillText(months < 1.5 ? `${+dd} ${TH_MON[+mm - 1]}` : `${TH_MON[+mm - 1]} ${(+yy + 543) % 100}`, x, T + ph + 9);
+  }
+  ctx.strokeStyle = "#9aa3af"; ctx.beginPath(); ctx.moveTo(L, T + ph + .5); ctx.lineTo(L + pw, T + ph + .5); ctx.stroke();
+
+  // เส้น (เส้นแรกวาดทีหลังให้อยู่บนสุด)
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 4, pw, ph + 8); ctx.clip();
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  for (const s of [...ser].reverse()) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = s === ser[0] ? 3 : 2.4;
+    ctx.beginPath(); s.pts.forEach(([d, v], i) => i ? ctx.lineTo(X(d), Y(v)) : ctx.moveTo(X(d), Y(v))); ctx.stroke();
+  }
+  ctx.restore();
+
+  // ป้ายค่าล่าสุดทางขวา (กันซ้อนกัน)
+  ctx.font = `600 16px ${FONT}`;
+  const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]), v: s.pts.at(-1)[1] })).sort((a, b) => a.y - b.y);
+  const gap = 30;
+  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < gap) tags[i].y = tags[i - 1].y + gap;
+  const over = tags.length ? tags.at(-1).y - (T + ph) : 0;
+  if (over > 0) { tags.forEach(t => t.y -= over); for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < gap) tags[i].y = tags[i + 1].y - gap; }
+  for (const t of tags) {
+    const txt = pct(t.v, 2), w = ctx.measureText(txt).width + 16, x = L + pw + 10;
+    ctx.fillStyle = t.s.color; roundRect(ctx, x, t.y - 13, w, 26, 6); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 8, t.y + 0.5);
+  }
+
+  // คำอธิบายเส้น
+  ctx.font = `500 17px ${FONT}`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  // จัดเรียงต่อกันตามความยาวชื่อ ขึ้นบรรทัดใหม่เมื่อเต็ม แล้วจัดกึ่งกลาง
+  const items = ser.map(s => ({ s, w: 24 + 10 + ctx.measureText(s.name).width + 36 }));
+  const lines = [[]]; let lw = 0;
+  for (const it of items) { if (lw + it.w > W - 48 && lines.at(-1).length) { lines.push([]); lw = 0; } lines.at(-1).push(it); lw += it.w; }
+  lines.forEach((ln, r) => {
+    let x = W / 2 - (ln.reduce((m, it) => m + it.w, 0) - 36) / 2; const y = T + ph + 52 + r * 30;
+    for (const it of ln) {
+      ctx.fillStyle = it.s.color; roundRect(ctx, x, y - 7, 24, 14, 3); ctx.fill();
+      ctx.fillStyle = "#1f2937"; ctx.fillText(it.s.name, x + 34, y + 0.5); x += it.w;
+    }
+  });
+  // ช่วงข้อมูล
+  if (opts.stamp !== false) {
+    ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(`ข้อมูล ${thDate(range.s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, W - 16, H - 10);
+  }
+  ctx.restore();
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+function renderChart() {
+  const cv = $("cv"), dpr = Math.max(2, window.devicePixelRatio || 1);
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw(ctx);
+}
+function exportCanvas(scale = 2) {
+  const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
+  const ctx = c.getContext("2d"); ctx.scale(scale, scale); draw(ctx); return c;
+}
+const toBlob = (c) => new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error("toBlob")), "image/png"));
+
+/* tooltip */
+$("cv").addEventListener("mousemove", (e) => {
+  const tt = $("tt"); if (!layout) { tt.style.display = "none"; return; }
+  const rect = $("cv").getBoundingClientRect(), k = W / rect.width;
+  const mx = (e.clientX - rect.left) * k;
+  if (mx < layout.L || mx > layout.L + layout.pw) { tt.style.display = "none"; return; }
+  const d = layout.x0 + (mx - layout.L) / layout.pw * (layout.x1 - layout.x0);
+  const rows = layout.ser.map(s => { let best = s.pts[0]; for (const p of s.pts) { if (p[0] <= d) best = p; else break; } return { s, p: best }; });
+  const iso = isoOf(Math.round(rows.reduce((m, r) => Math.max(m, r.p[0]), -Infinity)));
+  tt.innerHTML = `<b>${thDate(iso)}</b>` + rows.map(r => `<div class="r"><i style="background:${r.s.color}"></i>${esc(r.s.name)} <span style="margin-left:auto">${pct(r.p[1], 2)}</span></div>`).join("");
+  tt.style.display = "block";
+  const bx = $("chartBox").getBoundingClientRect(), x = e.clientX - bx.left;
+  tt.style.left = (x + 14 + tt.offsetWidth > bx.width ? x - 14 - tt.offsetWidth : x + 14) + "px";
+  tt.style.top = Math.max(8, e.clientY - bx.top - tt.offsetHeight / 2) + "px";
+});
+$("cv").addEventListener("mouseleave", () => $("tt").style.display = "none");
+
+/* ---------- ตารางข้อมูลเบื้องต้น */
+// ชื่อ field ที่ SEC อาจใช้ (แสดงเฉพาะแถวที่มีข้อมูลจริง)
+const SEC_ROWS = [
+  ["ประเภทกองทุน", ["fund_type", "proj_type", "fund_category", "aimc_category", "category"]],
+  ["ระดับความเสี่ยง", ["risk_spectrum", "risk_level", "risk_spectrum_level", "risk"]],
+  ["นโยบายการลงทุน", ["policy_desc", "invest_policy", "investment_policy", "fund_policy"]],
+  ["ป้องกันความเสี่ยงค่าเงิน", ["fx_hedging", "hedging_policy", "currency_hedging", "fx_hedge"]],
+  ["นโยบายปันผล", ["dividend_policy", "dividend_flag"]],
+  ["วันจดทะเบียน", ["regis_date", "registration_date", "inception_date", "approve_date"]],
+];
+const amcShort = (s) => String(s || "").replace(/^บริษัทหลักทรัพย์จัดการกองทุน\s*/, "บลจ. ").replace(/\s*จำกัด(\s*\(มหาชน\))?$/, "");
+function secVal(f, keys) {
+  for (const k of keys) { const v = f.sec?.[k]; if (v != null && String(v).trim()) return /date/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v) ? thDate(v.slice(0, 10)) : v; }
+  return null;
+}
+function tableModel() {
+  const fs = selected.map(byName).filter(Boolean);
+  const st = fs.map(f => stats(slice(f)));
+  const rows = [
+    ["ชื่อกองทุน", fs.map(f => f.info?.proj_name_th || "")],
+    ["บลจ.", fs.map(f => amcShort(f.info?.comp_name_th) || "")],
+  ];
+  for (const [label, keys] of SEC_ROWS) { const vals = fs.map(f => secVal(f, keys)); if (vals.some(v => v)) rows.push([label, vals.map(v => v || "")]); }
+  rows.push(
+    ["NAV ล่าสุด", fs.map(f => f.custom ? "" : f.v.length ? `${f.v.at(-1).toFixed(4)} (${thDate(f.d.at(-1))})` : "")],
+    ["มีข้อมูลตั้งแต่", fs.map(f => f.d.length ? thDate(f.d[0]) : "")],
+    ["ผลตอบแทนช่วงที่เลือก", st.map(s => s ? { t: pct(s.ret), c: cls(s.ret) } : "")],
+    ["ผลตอบแทนต่อปี", st.map(s => s && s.ann != null ? { t: pct(s.ann), c: cls(s.ann) } : "")],
+    ["ลดลงสูงสุดจากจุดสูงสุด", st.map(s => s ? { t: s.mdd > -0.005 ? "0.00%" : pct(s.mdd), c: s.mdd < -0.005 ? "neg" : "" } : "")],
+    ["นับจากวันที่", st.map(s => s ? thDate(s.start) : "")],
+  );
+  return { fs, rows };
+}
+function renderTable() {
+  const { fs, rows } = tableModel();
+  if (!fs.length) { $("tbl").innerHTML = ""; $("raw").innerHTML = ""; $("tblNote").textContent = ""; return; }
+  $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(range.s)} – ${thDate(range.e)}`;
+  const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v) || "–"}</td>`;
+  $("tbl").innerHTML = `<thead><tr><th></th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}</th>`).join("")}</tr></thead>` +
+    `<tbody>${rows.map(([l, vs]) => `<tr><th>${esc(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
+  $("raw").innerHTML = fs.filter(f => !f.custom).map(f =>
+    `<div><b>${esc(f.name)}</b><dl>${Object.entries(f.sec || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>`).join("") || "<div>ไม่มีข้อมูล</div>";
+}
+async function copyTable() {
+  const { fs, rows } = tableModel(); if (!fs.length) return;
+  const txt = (v) => typeof v === "object" ? v.t : (v || "–");
+  const tsv = [["", ...fs.map(f => f.name)].join("\t"), ...rows.map(([l, vs]) => [l, ...vs.map(txt)].join("\t"))].join("\n");
+  const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:Tahoma,sans-serif;font-size:11pt;";
+  const html = `<table style="border-collapse:collapse"><tr><th style="${td}"></th>${fs.map(f => `<th style="${td}background:#1b3560;color:#fff">${esc(f.name)}</th>`).join("")}</tr>` +
+    rows.map(([l, vs]) => `<tr><td style="${td}font-weight:bold">${esc(l)}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
+  } catch (e) { await navigator.clipboard.writeText(tsv); }
+  toast("Copy ตารางแล้ว วางใน PowerPoint / Excel ได้เลย");
+}
+
+/* ---------- ปุ่ม */
+function fileName(ext) { return (($("title").value.trim() || selected.join("_")) || "compare").replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80) + `_${range.s}_${range.e}.${ext}`; }
+$("copy").onclick = async () => {
+  if (!selected.length) return;
+  const btn = $("copy");
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": toBlob(exportCanvas(2)) })]);
+    btn.textContent = "Copy แล้ว ✓"; btn.classList.add("done"); toast("Copy รูปแล้ว ไปวางใน PowerPoint ได้เลย");
+  } catch (e) { toast("เบราว์เซอร์นี้ copy รูปไม่ได้ ใช้ดาวน์โหลด PNG แทน"); }
+  setTimeout(() => { btn.textContent = "Copy รูป"; btn.classList.remove("done"); }, 1800);
+};
+$("download").onclick = async () => {
+  if (!selected.length) return;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await toBlob(exportCanvas(2))); a.download = fileName("png"); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+$("print").onclick = () => {
+  if (!selected.length) return;
+  $("rTitle").textContent = $("title").value.trim() || "เปรียบเทียบผลตอบแทน " + selected.join(" · ");
+  $("rMeta").textContent = `ช่วงข้อมูล ${thDate(range.s)} – ${thDate(range.e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
+  $("rImg").src = exportCanvas(2).toDataURL("image/png");
+  $("rTbl").innerHTML = `<table>${$("tbl").innerHTML}</table>`;
+  const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
+  setTimeout(() => { window.print(); document.title = old; }, 150);
+};
+$("copyTable").onclick = copyTable;
+$("title").addEventListener("input", () => { renderChart(); saveHash(); });
+
+/* ---------- state ใน URL */
+function saveHash() {
+  const p = new URLSearchParams();
+  if (selected.length) p.set("f", selected.join("|"));
+  if (range.q) p.set("q", range.q); else { p.set("s", range.s || ""); p.set("e", range.e || ""); }
+  if ($("title").value.trim()) p.set("t", $("title").value.trim());
+  try { history.replaceState(null, "", "#" + p.toString()); } catch (e) {}
+}
+function loadHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const f = (p.get("f") || "").split("|").filter(n => byName(n));
+  if (f.length) selected = f.slice(0, MAX_SEL);
+  if (p.get("q")) range.q = p.get("q");
+  else if (p.get("s") && p.get("e")) range = { s: p.get("s"), e: p.get("e"), q: null };
+  if (p.get("t")) $("title").value = p.get("t");
+}
+
+function update() {
+  syncRangeUI();
+  const any = selected.some(n => byName(n));
+  $("chartBox").hidden = !any; $("empty").hidden = any;
+  ["copy", "download", "print", "copyTable"].forEach(id => $(id).disabled = !any);
+  renderChart(); renderTable(); saveHash();
+}
+
+/* ---------- เริ่ม */
+(async function init() {
+  CUSTOM = store.get().filter(c => c && c.name && Array.isArray(c.d)).map(c => ({ ...c, group: "จากไฟล์ CSV", custom: true, sec: {} }));
+  try {
+    const r = await fetch("compare/data.json?v=" + Date.now());
+    if (!r.ok) throw new Error(r.status);
+    DATA = await r.json();
+    $("asof").textContent = `ข้อมูลถึง ${thDate(DATA.updated)} · ย้อนหลัง ${DATA.years} ปี`;
+  } catch (e) {
+    $("asof").textContent = "ยังไม่มีข้อมูล";
+    $("notice").hidden = false;
+    $("notice").innerHTML = "ยังไม่มีไฟล์ข้อมูล — ไปที่ GitHub → Actions → <b>Compare data</b> → Run workflow ครั้งแรก (ระหว่างนี้อัปโหลด CSV เพื่อลองได้)";
+  }
+  const miss = Object.entries(DATA.missing || {}).concat((DATA.funds || []).filter(f => f.warning).map(f => [f.name, f.warning]));
+  if (miss.length) { $("notice").hidden = false; $("notice").innerHTML = "ต้องเช็คชื่อใน compare_funds.csv<ul>" + miss.map(([n, w]) => `<li>${esc(n)}: ${esc(w)}</li>`).join("") + "</ul>"; }
+  loadHash();
+  if (!selected.length) selected = allSeries().slice(0, 2).map(f => f.name);
+  rebuildDates(); renderList(); update();
+  if (document.fonts) document.fonts.ready.then(renderChart);
+})();
+</script>
+</body>
+</html>
