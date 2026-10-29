@@ -52,9 +52,7 @@
 
   /* กราฟ */
   .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-  .titles { display: flex; flex-direction: column; gap: 6px; flex: 1 1 300px; min-width: 0; }
-  .head input { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; min-width: 0; }
-  .head #subtitle { font-size: 13.5px; font-weight: 400; color: var(--ink); }
+  .head input { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; min-width: 0; flex: 1 1 260px; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--navy); white-space: nowrap; }
   .btn.primary { background: var(--navy); color: #fff; }
@@ -164,10 +162,7 @@
     <section>
       <div class="card">
         <div class="head">
-          <div class="titles">
-            <input id="title" placeholder="ชื่อกราฟ (ไม่ใส่ก็ได้)" aria-label="ชื่อกราฟ">
-            <input id="subtitle" placeholder="คำอธิบายใต้ชื่อ (ไม่ใส่ = ช่วงวันที่อัตโนมัติ)" aria-label="คำอธิบายใต้ชื่อ">
-          </div>
+          <input id="title" placeholder="ชื่อกราฟบนรูป (ไม่ใส่ก็ได้)" aria-label="ชื่อกราฟบนรูป">
           <div class="actions">
             <button class="btn primary" id="copy">Copy รูป</button>
             <button class="btn ghost" id="download">ดาวน์โหลด PNG</button>
@@ -185,7 +180,7 @@
           <input type="range" id="sA" min="0" max="1" value="0" aria-label="วันเริ่ม">
           <input type="range" id="sB" min="0" max="1" value="1" aria-label="วันสิ้นสุด"></div>
         <div class="note" id="alignNote" hidden></div>
-        <div class="chart" id="chartBox"><canvas id="cv" width="1200" height="620"></canvas><div class="tt" id="tt"></div></div>
+        <div class="chart" id="chartBox"><canvas id="cv" width="1200" height="560"></canvas><div class="tt" id="tt"></div></div>
         <div class="empty" id="empty" hidden>เลือกกองทุนทางซ้ายอย่างน้อย 1 กอง</div>
         <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" จะเริ่มนับจากวันที่ทุกกองมี NAV ครบ · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสีเส้น · วางใน PowerPoint: <b>Ctrl+V</b> หรือ <b>คลิกขวาที่รูปเก่า → Change Picture → From Clipboard</b></div>
       </div>
@@ -216,7 +211,7 @@ const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5
 const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
-const W = 1200, H = 620, FONT = '"IBM Plex Sans Thai", system-ui, sans-serif';
+const W = 1200, H = 560, FONT = '"IBM Plex Sans Thai", system-ui, sans-serif';
 
 let DATA = { funds: [], missing: {} };
 let CUSTOM = [];          // เส้นจาก CSV
@@ -241,6 +236,7 @@ const store = {
 
 const allSeries = () => [...CUSTOM, ...DATA.funds];
 const byName = (n) => allSeries().find(f => f.name === n);
+const isHero = (f) => !!f && (f.custom || /FIXEDSP/i.test(f.name));
 const colorOf = (n) => COLORS[n] || PALETTE[Math.max(0, selected.indexOf(n)) % PALETTE.length];
 const saveColors = () => { try { localStorage.setItem(COLOR_STORE, JSON.stringify(COLORS)); } catch (e) {} };
 
@@ -419,99 +415,99 @@ function niceStep(span, target) {
   return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10;
 }
 function draw(ctx, opts = {}) {
-  const si = startInfo();
   const title = $("title").value.trim();
-  const sub = $("subtitle").value.trim() || `% เปลี่ยนแปลงของ NAV, ${thDate(si.s)} – ${thDate(range.e)}`;
   const ser = selected.map(n => byName(n)).filter(Boolean).map(f => {
     const pts = slice(f); const b = pts[0]?.[1];
-    return { name: f.name, color: colorOf(f.name), pts: pts.map(([d, v]) => [dnum(d), (v / b - 1) * 100]) };
+    return { name: f.name, color: colorOf(f.name), hi: isHero(f), pts: pts.map(([d, v]) => [dnum(d), (v / b - 1) * 100]) };
   }).filter(s => s.pts.length >= 2);
-  const INK = "#1a1a1a", MUTE = "#888", GRID = "#e6e6e6";
 
   ctx.save();
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  let top = 22;
-  if (title) { ctx.font = `700 32px ${FONT}`; ctx.fillStyle = INK; top += 32; ctx.fillText(title, 28, top); top += 10; }
-  ctx.font = `400 19px ${FONT}`; ctx.fillStyle = "#333"; top += 22; ctx.fillText(sub, 28, top);
-  const T = top + 34, B = 64, L = 28;
+  const L = 92, R = 140, T = title ? 70 : 30;
+  const legendRows = Math.ceil(ser.length / 5);
+  const B = 62 + 30 * Math.max(legendRows, 1);
+  const pw = W - L - R, ph = H - T - B;
+  if (title) { ctx.font = `600 26px ${FONT}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
   if (!ser.length) { ctx.restore(); layout = null; return; }
 
-  // ป้ายท้ายเส้น: ชื่อกอง + ค่าล่าสุด
-  ctx.font = `500 17px ${FONT}`;
-  const labW = Math.max(...ser.map(s => ctx.measureText(s.name).width)) + 12 + (ctx.font = `700 17px ${FONT}`, ctx.measureText("+00.00%").width);
-  const R = Math.min(380, labW + 34);
-  const pw = W - L - R, ph = H - T - B;
-
-  const x0 = dnum(si.s), x1 = Math.max(dnum(range.e), x0 + 1);
+  const x0 = dnum(startInfo().s), x1 = Math.max(dnum(range.e), x0 + 1);
   let y0 = Math.min(0, ...ser.flatMap(s => s.pts.map(p => p[1]))), y1 = Math.max(0, ...ser.flatMap(s => s.pts.map(p => p[1])));
-  if (y1 - y0 < 0.05) y1 += 0.05;
-  const pad = (y1 - y0) * 0.04; y1 += pad; if (y0 < 0) y0 -= pad;
-  const step = niceStep(y1 - y0, 5);
+  if (y1 - y0 < 0.05) { y1 += 0.05; }
+  const pad = (y1 - y0) * 0.06; y1 += pad; if (y0 < 0) y0 -= pad;
+  const step = niceStep(y1 - y0, 6);
   y1 = Math.ceil(y1 / step - 1e-9) * step; if (y0 < 0 && y0 > -step * 0.6) y0 = y0 - step * 0.15; else y0 = Math.floor(y0 / step + 1e-9) * step;
   const X = (d) => L + (d - x0) / (x1 - x0) * pw;
   const Y = (v) => T + (y1 - v) / (y1 - y0) * ph;
   layout = { X, Y, x0, x1, L, T, pw, ph, ser };
 
-  // เส้นกริด + ตัวเลขแกน Y วางชิดซ้ายเหนือเส้น (ตัวบนสุดมี %)
-  const dp = step < 0.1 ? 2 : step < 1 ? 1 : 0;
-  ctx.font = `400 17px ${FONT}`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  // แกน Y
+  const dp = (String(+step.toFixed(6)).split(".")[1] || "").length;
+  ctx.font = `15px ${FONT}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   for (let v = Math.ceil(y0 / step - 1e-9) * step; v <= y1 + step / 2; v += step) {
-    const y = Math.round(Y(v)) + 0.5, zero = Math.abs(v) < step / 2;
-    if (!zero) { ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke(); }
-    const isTop = v + step > y1 + step / 2;
-    ctx.fillStyle = MUTE; ctx.fillText((zero ? "0" : v.toFixed(dp)) + (isTop ? "%" : ""), L, y - 6);
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = Math.abs(v) < step / 2 ? "#9aa3af" : "#eceff3"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+    ctx.fillStyle = "#6b7280"; ctx.fillText((Math.abs(v) < step / 2 ? 0 : v).toFixed(dp) + "%", L - 10, y);
   }
-  // เส้นฐาน 0% สีเข้ม
-  if (y0 <= 0 && y1 >= 0) { const y = Math.round(Y(0)) + 0.5; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke(); }
+  ctx.save(); ctx.translate(16, T + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = "#6b7280"; ctx.font = `14px ${FONT}`; ctx.fillText("% NAV Change", 0, 0); ctx.restore();
 
-  // แกน X
+  // แกน X: เลือกระยะเดือนให้ได้ราว 6–12 ป้าย
   const months = (x1 - x0) / 30.44;
-  const every = [1, 2, 3, 6, 12].find(k => months / k <= 8) || 12;
+  const every = [1, 2, 3, 6, 12].find(k => months / k <= 12) || 12;
   const sd = new Date(x0 * 864e5), ticks = [];
   let t = new Date(Date.UTC(sd.getUTCFullYear(), sd.getUTCMonth() + 1, 1));
   while (dnum(t.toISOString().slice(0, 10)) <= x1) { if (t.getUTCMonth() % every === 0 || every === 1) ticks.push(t.toISOString().slice(0, 10)); t = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1)); }
   if (months < 1.5) { ticks.length = 0; for (let d = Math.ceil(x0); d <= x1; d += 7) ticks.push(isoOf(d)); }
-  const axisY = Math.round(Y(Math.max(y0, Math.min(0, y1)))) + 0.5, baseY = T + ph;
-  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = `400 17px ${FONT}`;
+  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = `15px ${FONT}`;
   for (const iso of ticks) {
     const x = Math.round(X(dnum(iso))) + 0.5;
-    ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, baseY); ctx.lineTo(x, baseY + 5); ctx.stroke();
+    ctx.strokeStyle = "#f2f4f7"; ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
+    ctx.strokeStyle = "#9aa3af"; ctx.beginPath(); ctx.moveTo(x, T + ph); ctx.lineTo(x, T + ph + 5); ctx.stroke();
     const [yy, mm, dd] = iso.split("-");
-    ctx.fillStyle = "#555"; ctx.fillText(months < 1.5 ? `${+dd} ${TH_MON[+mm - 1]}` : every >= 12 ? `${+yy + 543}` : `${TH_MON[+mm - 1]} ${(+yy + 543) % 100}`, x, baseY + 10);
+    ctx.fillStyle = "#6b7280"; ctx.fillText(months < 1.5 ? `${+dd} ${TH_MON[+mm - 1]}` : `${TH_MON[+mm - 1]} ${(+yy + 543) % 100}`, x, T + ph + 9);
   }
-  if (Math.abs(axisY - (baseY + .5)) > 1) { ctx.strokeStyle = "#bbb"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, baseY + .5); ctx.lineTo(L + pw, baseY + .5); ctx.stroke(); }
+  ctx.strokeStyle = "#9aa3af"; ctx.beginPath(); ctx.moveTo(L, T + ph + .5); ctx.lineTo(L + pw, T + ph + .5); ctx.stroke();
 
-  // เส้นกราฟ (เส้นแรกอยู่บนสุด)
-  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 6, pw + 2, ph + 12); ctx.clip();
+  // เส้น (เส้นแรกวาดทีหลังให้อยู่บนสุด)
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 4, pw, ph + 8); ctx.clip();
   ctx.lineJoin = "round"; ctx.lineCap = "round";
-  for (const s of [...ser].reverse()) {
-    ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+  const hasHero = ser.some(s => s.hi);
+  for (const s of [...ser].sort((a, b) => (a.hi - b.hi) || (ser.indexOf(b) - ser.indexOf(a)))) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.hi ? 4.5 : hasHero ? 2 : (s === ser[0] ? 3 : 2.4);
     ctx.beginPath(); s.pts.forEach(([d, v], i) => i ? ctx.lineTo(X(d), Y(v)) : ctx.moveTo(X(d), Y(v))); ctx.stroke();
   }
   ctx.restore();
 
-  // ป้ายท้ายเส้น กันซ้อน + เส้นประโยงเมื่อป้ายถูกเลื่อน
-  const tags = ser.map(s => { const p = s.pts.at(-1); return { s, ex: X(p[0]), ey: Y(p[1]), y: Y(p[1]), v: p[1] }; }).sort((a, b) => a.y - b.y);
-  const gap = 26, lo = T, hi = T + ph + 8;
-  for (let i = 0; i < tags.length; i++) tags[i].y = Math.max(tags[i].y, i ? tags[i - 1].y + gap : lo);
-  for (let i = tags.length - 1; i >= 0; i--) tags[i].y = Math.min(tags[i].y, i < tags.length - 1 ? tags[i + 1].y - gap : hi);
-  const lx = L + pw + 22;
-  for (const tg of tags) {
-    if (Math.abs(tg.y - tg.ey) > 3) {
-      ctx.strokeStyle = tg.s.color; ctx.lineWidth = 1.2; ctx.setLineDash([2, 3]);
-      ctx.beginPath(); ctx.moveTo(tg.ex + 4, tg.ey); ctx.lineTo(lx - 6, tg.y); ctx.stroke(); ctx.setLineDash([]);
-    }
-    ctx.textBaseline = "middle"; ctx.textAlign = "left";
-    ctx.font = `500 17px ${FONT}`; ctx.fillStyle = INK; ctx.fillText(tg.s.name, lx, tg.y);
-    const nw = ctx.measureText(tg.s.name).width;
-    ctx.font = `700 17px ${FONT}`; ctx.fillStyle = tg.s.color; ctx.fillText(pct(tg.v, 2), lx + nw + 10, tg.y);
+  // ป้ายค่าล่าสุดทางขวา (กันซ้อนกัน)
+  ctx.font = `600 16px ${FONT}`;
+  const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]), v: s.pts.at(-1)[1] })).sort((a, b) => a.y - b.y);
+  const gap = 30;
+  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < gap) tags[i].y = tags[i - 1].y + gap;
+  const over = tags.length ? tags.at(-1).y - (T + ph) : 0;
+  if (over > 0) { tags.forEach(t => t.y -= over); for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < gap) tags[i].y = tags[i + 1].y - gap; }
+  for (const t of tags) {
+    const txt = pct(t.v, 2), w = ctx.measureText(txt).width + 16, x = L + pw + 10;
+    ctx.fillStyle = t.s.color; roundRect(ctx, x, t.y - 13, w, 26, 6); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 8, t.y + 0.5);
   }
 
-  // ที่มา
+  // คำอธิบายเส้น
+  ctx.font = `500 17px ${FONT}`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  // จัดเรียงต่อกันตามความยาวชื่อ ขึ้นบรรทัดใหม่เมื่อเต็ม แล้วจัดกึ่งกลาง
+  const items = ser.map(s => ({ s, w: 24 + 10 + ctx.measureText(s.name).width + 36 }));
+  const lines = [[]]; let lw = 0;
+  for (const it of items) { if (lw + it.w > W - 48 && lines.at(-1).length) { lines.push([]); lw = 0; } lines.at(-1).push(it); lw += it.w; }
+  lines.forEach((ln, r) => {
+    let x = W / 2 - (ln.reduce((m, it) => m + it.w, 0) - 36) / 2; const y = T + ph + 52 + r * 30;
+    for (const it of ln) {
+      ctx.fillStyle = it.s.color; roundRect(ctx, x, y - 7, 24, 14, 3); ctx.fill();
+      ctx.font = `${it.s.hi ? 700 : 500} 17px ${FONT}`; ctx.fillStyle = "#1f2937"; ctx.fillText(it.s.name, x + 34, y + 0.5); x += it.w;
+    }
+  });
+  // ช่วงข้อมูล
   if (opts.stamp !== false) {
-    ctx.font = `400 15px ${FONT}`; ctx.fillStyle = MUTE; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(`ที่มา: SEC Open API (สำนักงาน ก.ล.ต.) · คำนวณจาก NAV ต่อหน่วย`, L, H - 16);
+    ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(`ข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, W - 16, H - 10);
   }
   ctx.restore();
 }
@@ -629,7 +625,6 @@ $("print").onclick = () => {
 };
 $("copyTable").onclick = copyTable;
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
-$("subtitle").addEventListener("input", () => { renderChart(); saveHash(); });
 
 /* ---------- state ใน URL */
 function saveHash() {
@@ -637,7 +632,6 @@ function saveHash() {
   if (selected.length) p.set("f", selected.join("|"));
   if (range.q) p.set("q", range.q); else { p.set("s", range.s || ""); p.set("e", range.e || ""); }
   if ($("title").value.trim()) p.set("t", $("title").value.trim());
-  if ($("subtitle").value.trim()) p.set("st", $("subtitle").value.trim());
   const cs = selected.filter(n => COLORS[n]).map(n => n + ":" + COLORS[n].slice(1));
   if (cs.length) p.set("c", cs.join("|"));
   if (!$("align").checked) p.set("a", "0");
@@ -650,7 +644,6 @@ function loadHash() {
   if (p.get("q")) range.q = p.get("q");
   else if (p.get("s") && p.get("e")) range = { s: p.get("s"), e: p.get("e"), q: null };
   if (p.get("t")) $("title").value = p.get("t");
-  if (p.get("st")) $("subtitle").value = p.get("st");
   for (const kv of (p.get("c") || "").split("|")) { const i = kv.lastIndexOf(":"); if (i > 0 && /^[0-9a-f]{6}$/i.test(kv.slice(i + 1))) COLORS[kv.slice(0, i)] = "#" + kv.slice(i + 1); }
   if (p.get("a") === "0") $("align").checked = false;
 }
