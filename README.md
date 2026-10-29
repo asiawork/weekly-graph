@@ -3,6 +3,15 @@
 สร้างกราฟ NAV สำหรับรายงาน **Top Funds Weekly Market Recap** อัตโนมัติจาก SEC Open API
 เปิดหน้าเว็บ → เลือกกอง → กด **Copy รูป** → วางใน PowerPoint
 
+## หน้าเว็บมี 2 แท็บ
+
+| แท็บ | ใช้ทำอะไร | ลิงก์ | คู่มือ |
+|---|---|---|---|
+| **Top Funds Weekly Charts** | กราฟ NAV ของกองที่แนะนำ ตั้งแต่วันแนะนำ สำหรับรายงานรายสัปดาห์ | [docs/index.html](https://asiawork.github.io/weekly-graph/docs/) | ไฟล์นี้ |
+| **เปรียบเทียบ FIXEDSP** | เทียบผลตอบแทน FIXEDSP กับกองความเสี่ยง 1–4 เลือกกอง/ช่วงเวลา/สีเอง + ตารางข้อมูลกอง + ดาวน์โหลดรายงาน PDF | [docs/compare.html](https://asiawork.github.io/weekly-graph/docs/compare.html) | [COMPARE.md](COMPARE.md) |
+
+สองแท็บใช้ข้อมูลและ workflow แยกกัน (`Weekly charts` / `Compare data`) แก้หรือรันอันหนึ่งไม่กระทบอีกอัน
+
 ## ใช้งานทุกสัปดาห์
 
 1. ระบบรันเองทุก **วันจันทร์ 06:15** (เวลาไทย) ดึง NAV ล่าสุดและสร้างกราฟใหม่
