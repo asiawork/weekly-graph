@@ -700,7 +700,23 @@ function secCell(f, label) {
   }
   return "";
 }
-const cellFor = (name, f, label) => secCell(f, label);
+// ข้อมูลคอลัมน์ FIXEDSP (ตามสไลด์เทียบกอง) แก้ข้อความได้ที่นี่
+const FIXEDSP_INFO = {
+  "บลจ.": "BLS",
+  "นโยบายค่าเงิน": "ป้องกันทั้งหมด/เกือบทั้งหมด",
+  "สัดส่วนประเภทการลงทุนทั้งภาครัฐและเอกชน": "สามารถลงทุนได้ทั้งตราสารภาครัฐ และเอกชน",
+  "อายุเฉลี่ยของตราสาร": "2 เดือน",
+  "อัตราผลตอบแทนที่คาดหวัง 1 ปี": "1.0-1.1%",
+  "Average Credit Rating": "AA",
+  "ระยะเวลาที่ควรถือลงทุน": "ตั้งแต่ 1 สัปดาห์ขึ้นไป",
+  "ค่าธรรมเนียมขาย (Front-End Fee)": "ปัจจุบันไม่เรียกเก็บ",
+  "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "0.24%",
+  "ระยะเวลารับเงินค่าขายคืน": "T+2",
+  "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล",
+};
+const FIXEDSP_SOURCE = "ข้อมูล FIXEDSP: BLS Top Funds ณ เดือน ต.ค. 69";
+const FIXEDSP_MAP = Object.fromEntries(Object.entries(FIXEDSP_INFO).map(([k, v]) => [keyOf(k), v]));
+const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyOf(label)] || "") : secCell(f, label);
 function modelT1() {
   const others = selected.map(byName).filter(f => f && !isHero(f));
   const cols = [...others.map(f => ({ name: f.name, f })), { name: "FIXEDSP", f: null }];
@@ -715,7 +731,7 @@ function renderTable() {
   renderInfos(); renderPerf();
   $("tblNote").textContent = selected.length ? `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}` : "";
   $("t1").innerHTML = tableHTML(modelT1());
-  $("src1").textContent = "ที่มา: SEC Open API (สำนักงาน ก.ล.ต.)";
+  $("src1").textContent = `ที่มา: SEC Open API (สำนักงาน ก.ล.ต.) · ${FIXEDSP_SOURCE}`;
 }
 async function copyModel(m) {
   const txt = (v) => v || "";
@@ -809,8 +825,6 @@ function update() {
     $("notice").hidden = false;
     $("notice").innerHTML = "ยังไม่มีไฟล์ข้อมูล — ไปที่ GitHub → Actions → <b>Compare data</b> → Run workflow ครั้งแรก (ระหว่างนี้อัปโหลด CSV เพื่อลองได้)";
   }
-  const miss = Object.entries(DATA.missing || {}).concat((DATA.funds || []).filter(f => f.warning).map(f => [f.name, f.warning]));
-  if (miss.length) { $("notice").hidden = false; $("notice").innerHTML = "ต้องเช็คชื่อใน compare_funds.csv<ul>" + miss.map(([n, w]) => `<li>${esc(n)}: ${esc(w)}</li>`).join("") + "</ul>"; }
   loadHash();
   if (!selected.length) selected = allSeries().slice(0, 2).map(f => f.name);
   rebuildDates(); renderList(); update();
