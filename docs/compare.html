@@ -516,18 +516,17 @@ $("cv").addEventListener("mousemove", (e) => {
 $("cv").addEventListener("mouseleave", () => $("tt").style.display = "none");
 
 /* ---------- ตารางข้อมูลเบื้องต้น */
-// ชื่อ field ที่ SEC อาจใช้ (แสดงเฉพาะแถวที่มีข้อมูลจริง)
+// field จาก SEC /v2/fund/general-info/profiles (แสดงเฉพาะแถวที่มีข้อมูล)
 const SEC_ROWS = [
-  ["ประเภทกองทุน", ["fund_type", "proj_type", "fund_category", "aimc_category", "category"]],
-  ["ระดับความเสี่ยง", ["risk_spectrum", "risk_level", "risk_spectrum_level", "risk"]],
-  ["นโยบายการลงทุน", ["policy_desc", "invest_policy", "investment_policy", "fund_policy"]],
-  ["ป้องกันความเสี่ยงค่าเงิน", ["fx_hedging", "hedging_policy", "currency_hedging", "fx_hedge"]],
-  ["นโยบายปันผล", ["dividend_policy", "dividend_flag"]],
-  ["วันจดทะเบียน", ["regis_date", "registration_date", "inception_date", "approve_date"]],
+  ["ประเภทกองทุน", ["policy_desc"]],
+  ["ชนิดหน่วยลงทุน", ["fund_class_detail"]],
+  ["ป้องกันความเสี่ยงค่าเงิน", ["exchange_rate_protection_policy"], (v) => v.replace(/\s*\(.*$/, "")],
+  ["วันจดทะเบียนกองทุน", ["regis_date"]],
 ];
+const stripHtml = (s) => String(s).replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 const amcShort = (s) => String(s || "").replace(/^บริษัทหลักทรัพย์จัดการกองทุน\s*/, "บลจ. ").replace(/\s*จำกัด(\s*\(มหาชน\))?$/, "");
-function secVal(f, keys) {
-  for (const k of keys) { const v = f.sec?.[k]; if (v != null && String(v).trim()) return /date/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v) ? thDate(v.slice(0, 10)) : v; }
+function secVal(f, keys, fmt) {
+  for (const k of keys) { const v = f.sec?.[k]; if (v != null && String(v).trim()) return /date/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v) ? thDate(v.slice(0, 10)) : fmt ? fmt(v) : v; }
   return null;
 }
 function tableModel() {
@@ -537,7 +536,7 @@ function tableModel() {
     ["ชื่อกองทุน", fs.map(f => f.info?.proj_name_th || "")],
     ["บลจ.", fs.map(f => amcShort(f.info?.comp_name_th) || "")],
   ];
-  for (const [label, keys] of SEC_ROWS) { const vals = fs.map(f => secVal(f, keys)); if (vals.some(v => v)) rows.push([label, vals.map(v => v || "")]); }
+  for (const [label, keys, fmt] of SEC_ROWS) { const vals = fs.map(f => secVal(f, keys, fmt)); if (vals.some(v => v)) rows.push([label, vals.map(v => v || "")]); }
   rows.push(
     ["NAV ล่าสุด", fs.map(f => f.custom ? "" : f.v.length ? `${f.v.at(-1).toFixed(4)} (${thDate(f.d.at(-1))})` : "")],
     ["มีข้อมูลตั้งแต่", fs.map(f => f.d.length ? thDate(f.d[0]) : "")],
@@ -556,7 +555,7 @@ function renderTable() {
   $("tbl").innerHTML = `<thead><tr><th></th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}</th>`).join("")}</tr></thead>` +
     `<tbody>${rows.map(([l, vs]) => `<tr><th>${esc(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
   $("raw").innerHTML = fs.filter(f => !f.custom).map(f =>
-    `<div><b>${esc(f.name)}</b><dl>${Object.entries(f.sec || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>`).join("") || "<div>ไม่มีข้อมูล</div>";
+    `<div><b>${esc(f.name)}</b><dl>${Object.entries(f.sec || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(stripHtml(v))}</dd>`).join("")}</dl></div>`).join("") || "<div>ไม่มีข้อมูล</div>";
 }
 async function copyTable() {
   const { fs, rows } = tableModel(); if (!fs.length) return;

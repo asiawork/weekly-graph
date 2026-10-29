@@ -115,6 +115,9 @@ def main():
         series = fn.read_cache(fn.NAV_DIR / f"{fn.slug(info['name'])}.csv")
         series = {d: v for d, v in series.items() if d >= start}
         days = sorted(series)
+        # กอง/class ที่เพิ่งเปิด: ช่วงก่อนเปิดไม่มี NAV ของ class นี้ ไม่นับเป็นปัญหาถ้าได้ข้อมูลมาแล้ว
+        if days and warn and warn.startswith("API ตอบกลับมาแต่ไม่มี NAV"):
+            warn = None
         print(f"  ok {len(days)} วัน {warn or ''}")
         out_funds.append({
             "name": f["name"],
