@@ -133,6 +133,11 @@
   .infos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
   .info { background: var(--card); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 14px 16px; border-top: 4px solid var(--c, var(--navy)); }
   .info h4 { margin: 0; font-size: 17px; color: var(--navy); }
+  .info-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .docbtn { display: inline-flex; align-items: center; gap: 6px; flex: none; background: #f1f3f5; color: var(--ink); text-decoration: none;
+            font-size: 13px; font-weight: 600; padding: 6px 12px 6px 10px; border-radius: 999px; transition: background .15s; }
+  .docbtn:hover { background: #e4e8ee; }
+  .docbtn svg { width: 16px; height: 16px; color: var(--navy); }
   .info .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; line-height: 1.45; }
   .info dl { margin: 10px 0 0; display: grid; grid-template-columns: 148px 1fr; gap: 6px 10px; font-size: 13px; }
   .info dt { color: var(--muted); } .info dd { margin: 0; }
@@ -544,8 +549,8 @@ function draw(ctx, opts = {}) {
   const tagText = (s) => `${s.name}  ${pct(s.pts.at(-1)[1], 2)}`;
   ctx.font = `700 16px ${FONT}`;
   const tagW = Math.max(0, ...ser.map(s => ctx.measureText(tagText(s)).width)) + 20;
-  const L = 92, R = Math.min(420, Math.max(140, tagW + 22)), T = title ? 70 : 30;
-  const B = 62;
+  const L = 70, R = Math.min(420, Math.max(120, tagW + 24)), T = title ? 70 : 30;
+  const B = 70;
   const pw = W - L - R, ph = H - T - B;
   if (title) { ctx.font = `600 26px ${FONT}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
   if (!ser.length) { ctx.restore(); layout = null; return; }
@@ -569,7 +574,7 @@ function draw(ctx, opts = {}) {
     ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
     ctx.fillStyle = "#6b7280"; ctx.fillText((Math.abs(v) < step / 2 ? 0 : v).toFixed(dp) + "%", L - 10, y);
   }
-  ctx.save(); ctx.translate(16, T + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillStyle = "#6b7280"; ctx.font = `14px ${FONT}`; ctx.fillText("% NAV Change", 0, 0); ctx.restore();
+
 
   // แกน X: เลือกระยะเดือนให้ได้ราว 6–12 ป้าย
   const months = (x1 - x0) / 30.44;
@@ -613,8 +618,8 @@ function draw(ctx, opts = {}) {
 
   // ช่วงข้อมูล
   if (opts.stamp !== false) {
-    ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(`ข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, W - 16, H - 10);
+    ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(`% เปลี่ยนแปลงของ NAV · ข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, 16, H - 12);
   }
   ctx.restore();
 }
@@ -690,7 +695,10 @@ function renderInfos() {
       ["นโยบายลงทุน", sec.investment_policy_desc ? `<div class="pol" title="คลิกเพื่ออ่านทั้งหมด">${esc(stripHtml(sec.investment_policy_desc))}</div>` : "", true],
     ];
     const names = f.custom ? "ข้อมูลที่อัปโหลดจากไฟล์ CSV" : [sec.proj_name_th || f.info?.proj_name_th, sec.proj_name_en].filter(Boolean).map(esc).join("<br>");
-    return `<div class="info" style="--c:${colorOf(f.name)}"><h4>${esc(f.name)}${ipoTag(f)}</h4><div class="sub">${names}</div>` +
+    const fsl = f.x?.fs;
+    const doc = fsl?.[0] ? `<a class="docbtn" href="${esc(fsl[0])}" target="_blank" rel="noopener" title="หนังสือชี้ชวนส่วนสรุปข้อมูลสำคัญ (Fund Fact Sheet)${fsl[1] ? " ข้อมูล ณ " + esc(thDate(fsl[1])) : ""}">` +
+      `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2.5h6.5L16 7v10.5H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M11.5 2.5V7H16M7.8 10.5h5.4M7.8 13.5h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>หนังสือชี้ชวน</a>` : "";
+    return `<div class="info" style="--c:${colorOf(f.name)}"><div class="info-head"><h4>${esc(f.name)}${ipoTag(f)}</h4>${doc}</div><div class="sub">${names}</div>` +
       (rows.length ? `<dl>${rows.map(([k, v, raw]) => `<dt>${k}</dt><dd>${v ? (raw ? v : esc(v)) : "–"}</dd>`).join("")}</dl>` : "") + `</div>`;
   }).join("");
 }

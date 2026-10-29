@@ -76,6 +76,7 @@ PORT_FILE = ROOT / "docs" / "fixedsp" / "port.csv"   # กองในพอร�
 STATS_URL = f"{fn.BASE}/factsheet/statistics"
 FEES_URL = f"{fn.BASE}/factsheet/fees"
 REDEMP_URL = f"{fn.BASE}/factsheet/subscription-redemption-period"
+URLS_URL = f"{fn.BASE}/factsheet/urls"
 
 
 def ckey(pid, cls) -> str:
@@ -83,11 +84,13 @@ def ckey(pid, cls) -> str:
     return f"{pid}|{'' if c.lower() in ('', 'main', 'none', 'nan') else fn.norm(c)}"
 
 
-def load_latest(url, label):
+def load_latest(url, label, latest=True):
     """ดึงข้อมูล factsheet ล่าสุดทุกกองแบบเป็นหน้า ๆ (ดึงทีเดียวทั้งตลาด)"""
     rows, cursor = [], None
     while True:
-        params = {"latest": "true", "page_size": "100"}
+        params = {"page_size": "100"}
+        if latest:
+            params["latest"] = "true"
         if cursor:
             params["next_cursor"] = cursor
         r = fn.get(url, params)
@@ -127,6 +130,19 @@ def load_extras():
                 fn_row(row)
         except Exception as e:  # noqa: BLE001
             print(f"  ! ดึง {label} ไม่ได้: {e}")
+    # ลิงก์หนังสือชี้ชวน (fund factsheet) — endpoint นี้ไม่มีพารามิเตอร์ latest เก็บฉบับ as_of ล่าสุด
+    try:
+        for row in load_latest(URLS_URL, "factsheet urls", latest=False):
+            link = row.get("pdf_factsheet") or row.get("amc_url_factsheet")
+            if not link:
+                continue
+            key = ckey(row.get("proj_id"), row.get("fund_class_name"))
+            d = str(row.get("as_of_date") or "")
+            cur = ex.setdefault(key, {}).get("fs")
+            if not cur or d >= cur[1]:
+                ex[key]["fs"] = [link, d, row.get("amc_url_factsheet") or ""]
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! ดึง factsheet urls ไม่ได้: {e}")
     return ex
 
 
@@ -421,7 +437,9 @@ def main():
             "info": info,
             "sec": scalar_fields(raw_profile(info)),
             "risk": risk.get(info["proj_id"]),
-            "x": {**extras.get(ckey(info["proj_id"], info["fund_class_name"]), {}),
+            "x": {**({"fs": extras.get(ckey(info["proj_id"], ""), {}).get("fs")}
+                     if extras.get(ckey(info["proj_id"], ""), {}).get("fs") else {}),
+                  **extras.get(ckey(info["proj_id"], info["fund_class_name"]), {}),
                   **({"aum": AUM[ckey(info["proj_id"], info["fund_class_name"])]}
                      if ckey(info["proj_id"], info["fund_class_name"]) in AUM else {})},
             "warning": warn,
