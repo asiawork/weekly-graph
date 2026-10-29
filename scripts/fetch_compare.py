@@ -16,6 +16,7 @@
 import csv
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -27,6 +28,15 @@ ROOT = fn.ROOT
 DATA = ROOT / "data" / "compare"
 OUT = ROOT / "docs" / "compare"
 YEARS = int(os.getenv("COMPARE_YEARS", "3"))
+# เพิ่มกองตลาดเงิน (ความเสี่ยงระดับ 1–2) ทุกกองให้อัตโนมัติ จากนโยบายการลงทุนใน SEC profiles
+AUTO_MM = os.getenv("AUTO_MONEY_MARKET", "1") == "1"
+MM_GROUP = "ตลาดเงิน"
+
+
+def is_money_market(p: dict) -> bool:
+    txt = re.sub(r"<[^>]+>", " ", str(p.get("investment_policy_desc") or ""))
+    txt = re.sub(r"\s+", "", txt)
+    return "กองทุนรวมตลาดเงิน" in txt and "ไม่ใช่กองทุนรวมตลาดเงิน" not in txt and "ไม่เป็นกองทุนรวมตลาดเงิน" not in txt
 
 # ให้ fetch_series ของ fetch_nav.py เขียนลงโฟลเดอร์ของหน้าเปรียบเทียบแทนโฟลเดอร์เดิม
 fn.NAV_DIR = DATA / "nav"
@@ -52,6 +62,58 @@ def scalar_fields(row: dict) -> dict:
             s = str(v).strip()
             keep[k] = s if len(s) <= 400 else s[:400] + "…"
     return keep
+
+
+def stitch_old_class(info, start, series):
+    """class ที่เพิ่งแยกออกมา (เช่น K-CASH-A): NAV ก่อนวันแรกของ class อยู่ใต้ class เดิม
+    ดึงช่วงที่ขาด แยกตาม class แล้วต่อเฉพาะ class ที่ NAV ต่อเนื่องกัน (ต่างกันไม่เกิน 0.5% ที่รอยต่อ)
+    คืน (series ใหม่, ข้อความหมายเหตุ หรือ None)"""
+    if not series or not info["fund_class_name"]:
+        return series, None
+    first = min(series)
+    if first <= start + timedelta(days=20):
+        return series, None
+    by_cls = {}
+    cur = start
+    while cur < first:
+        to = min(cur + timedelta(days=fn.CHUNK_DAYS - 1), first - timedelta(days=1))
+        try:
+            rows = fn.call_nav(info["proj_id"], cur, to)
+        except Exception as e:  # noqa: BLE001
+            print(f"  ! ต่อข้อมูล class เดิมไม่ได้: {e}")
+            return series, None
+        for row in rows:
+            dk, vk = fn.first_key(row, fn.DATE_KEYS), fn.first_key(row, fn.VALUE_KEYS)
+            if not dk or not vk:
+                continue
+            ck = fn.first_key(row, fn.CLASS_KEYS)
+            try:
+                raw = str(row[dk])
+                d = datetime.fromisoformat(raw[:10]).date() if "-" in raw else datetime.strptime(raw[:8], "%Y%m%d").date()
+                v = float(row[vk])
+            except (ValueError, TypeError):
+                continue
+            if v > 0:
+                by_cls.setdefault(str(row[ck]).strip() if ck else "", {})[d] = v
+        cur = to + timedelta(days=1)
+    base = series[first]
+    best = None
+    for cls_name, ser in by_cls.items():
+        if not ser or fn.norm(cls_name) == fn.norm(info["fund_class_name"]):
+            continue
+        last = max(ser)
+        if (first - last).days > 7:
+            continue
+        gap = abs(ser[last] / base - 1)
+        if gap <= 0.005 and (best is None or gap < best[1]):
+            best = (cls_name, gap, ser)
+    if not best:
+        return series, None
+    cls_name, _, ser = best
+    merged = {**{d: v for d, v in ser.items() if d < first}, **series}
+    note = f"ก่อน {first.isoformat()} ใช้ NAV ของ class {cls_name or 'หลัก'} (class นี้เริ่มวันนั้น)"
+    print(f"  ต่อข้อมูล: {note}")
+    return merged, note
 
 
 def main():
@@ -80,7 +142,29 @@ def main():
     start = today - timedelta(days=round(365.25 * YEARS) + 7)
 
     resolved, missing = {}, {}
+    if AUTO_MM:
+        listed = {fn.norm(f["name"]) for f in funds}
+        added = 0
+        for p in profiles:
+            if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not is_money_market(p):
+                continue
+            cls = str(p.get("fund_class_name") or "").strip()
+            cls = "" if cls.lower() in ("main", "none", "nan") else cls
+            name = cls or str(p.get("proj_abbr_name") or "").strip()
+            if not name or fn.norm(name) in listed:
+                continue
+            listed.add(fn.norm(name))
+            funds.append({"name": name, "group": MM_GROUP, "auto": True})
+            resolved[name] = {
+                "proj_id": p.get("proj_id"), "proj_abbr_name": str(p.get("proj_abbr_name") or "").strip(),
+                "fund_class_name": cls, "proj_name_th": p.get("proj_name_th"),
+                "comp_name_th": p.get("comp_name_th"), "name": name,
+            }
+            added += 1
+        print(f"เพิ่มกองตลาดเงินอัตโนมัติ {added} กอง")
     for f in funds:
+        if f["name"] in resolved:
+            continue
         res = fn.resolve(f["name"], by_class, by_abbr)
         if res is None:
             missing[f["name"]] = "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
@@ -100,6 +184,8 @@ def main():
                 break
         return
 
+    notes_path = DATA / "notes.json"
+    notes = json.loads(notes_path.read_text()) if notes_path.exists() else {}
     out_funds = []
     for f in funds:
         info = resolved.get(f["name"])
@@ -112,7 +198,13 @@ def main():
         except Exception as e:  # noqa: BLE001
             warn = str(e)[:300]
             print(f"  ! {e}")
-        series = fn.read_cache(fn.NAV_DIR / f"{fn.slug(info['name'])}.csv")
+        cache = fn.NAV_DIR / f"{fn.slug(info['name'])}.csv"
+        series = fn.read_cache(cache)
+        series, stitched = stitch_old_class(info, start, series)
+        if stitched:
+            fn.write_cache(cache, series)   # รอบหน้าดึงเฉพาะวันใหม่
+            notes[info["name"]] = stitched
+        stitched = stitched or notes.get(info["name"])
         series = {d: v for d, v in series.items() if d >= start}
         days = sorted(series)
         # กอง/class ที่เพิ่งเปิด: ช่วงก่อนเปิดไม่มี NAV ของ class นี้ ไม่นับเป็นปัญหาถ้าได้ข้อมูลมาแล้ว
@@ -125,10 +217,13 @@ def main():
             "info": info,
             "sec": scalar_fields(raw_profile(info)),
             "warning": warn,
+            "note": stitched,
             "d": [d.isoformat() for d in days],
             "v": [round(series[d], 4) for d in days],
         })
 
+    DATA.mkdir(parents=True, exist_ok=True)
+    notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
     OUT.mkdir(parents=True, exist_ok=True)
     payload = {
         "updated": today.isoformat(),
