@@ -52,6 +52,8 @@
   .align { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
   .align input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
   .note { font-size: 12.5px; color: #7a4b00; margin: -4px 0 8px; }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .3px; line-height: 1; padding: 3px 6px; border-radius: 5px; background: #fdecd8; color: #a14a00; vertical-align: middle; margin-left: 6px; }
+  thead .tag { background: #fff; color: var(--navy); }
   .opt .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
   .opt .x:hover { color: var(--neg); }
@@ -249,6 +251,8 @@ const store = {
 
 const allSeries = () => [...CUSTOM, ...DATA.funds];
 const byName = (n) => allSeries().find(f => f.name === n);
+const isIPO = (f) => String(f?.sec?.fund_status || "").toUpperCase() === "IPO";
+const ipoTag = (f) => isIPO(f) ? `<span class="tag" title="กองทุนเปิดขายครั้งแรก (IPO) ยังไม่มี NAV ย้อนหลัง">IPO</span>` : "";
 const isHero = (f) => !!f && (f.custom || /FIXEDSP/i.test(f.name));
 const colorOf = (n) => COLORS[n] || PALETTE[Math.max(0, selected.indexOf(n)) % PALETTE.length];
 const saveColors = () => { try { localStorage.setItem(COLOR_STORE, JSON.stringify(COLORS)); } catch (e) {} };
@@ -329,7 +333,7 @@ function renderList() {
     `<details class="grp" data-g="${esc(g)}" ${q || openGroups.has(g) || fs.some(f => selected.includes(f.name)) ? "open" : ""}><summary class="grp-name">${esc(g)} <span>${fs.length}</span></summary>` + fs.map(f => {
       const on = selected.includes(f.name);
       return `<label class="opt" title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
-        (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) + `<span class="nm">${esc(f.name)}</span>` +
+        (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) + `<span class="nm">${esc(f.name)}${ipoTag(f)}</span>` +
         (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
     }).join("") + `</details>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
   $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
@@ -611,7 +615,7 @@ function renderTable() {
   $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}`;
   const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v)}</td>`;
   const lab = (l) => esc(l).replace(/\n/g, "<br>");
-  $("tbl").innerHTML = `<thead><tr><th>กองทุน</th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}</th>`).join("")}</tr></thead>` +
+  $("tbl").innerHTML = `<thead><tr><th>กองทุน</th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}${ipoTag(f)}</th>`).join("")}</tr></thead>` +
     `<tbody>${rows.map(([l, vs], i) => `<tr${i === perfFrom ? ' class="perf"' : ""}><th>${lab(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
   $("raw").innerHTML = fs.filter(f => !f.custom).map(f =>
     `<div><b>${esc(f.name)}</b><dl>${Object.entries(f.sec || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(stripHtml(v))}</dd>`).join("")}</dl></div>`).join("") || "<div>ไม่มีข้อมูล</div>";
