@@ -105,7 +105,10 @@
   th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
   thead th { background: var(--navy); color: #fff; font-weight: 600; font-size: 13px; white-space: nowrap; }
   thead th i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; border: 1.5px solid #fff; }
-  tbody th { font-weight: 500; color: var(--muted); white-space: nowrap; width: 1%; }
+  tbody th { font-weight: 500; color: #fff; background: var(--navy); text-align: center; white-space: nowrap; width: 1%; border-bottom: 1px solid #fff; line-height: 1.35; }
+  thead th:first-child { text-align: center; }
+  td { text-align: center; }
+  tr.perf th, tr.perf td { border-top: 3px solid var(--line); }
   td.num { white-space: nowrap; }
   .pos { color: var(--pos); } .neg { color: var(--neg); }
   details { margin-top: 10px; font-size: 13px; }
@@ -162,9 +165,8 @@
       <div id="list"></div>
       <div class="count" id="count"></div>
       <div class="upload">
-        <h2>เพิ่มเส้นจากไฟล์ CSV</h2>
-        <p>เช่น NAV ของ FIXEDSP · ต้องมีคอลัมน์วันที่ และค่า NAV / index / % สะสม · ไฟล์อยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ขึ้น GitHub</p>
-        <input type="text" id="csvName" placeholder="ชื่อเส้น (ไม่ใส่ = ใช้ชื่อไฟล์)">
+        <h2>เพิ่มข้อมูล FIXEDSP</h2>
+        <input type="text" id="csvName" placeholder="ชื่อเส้น (ไม่ใส่ = FIXEDSP)">
         <input type="file" id="csvFile" accept=".csv,.txt,text/csv" hidden>
         <button class="btn ghost sm" id="csvBtn">เลือกไฟล์ CSV</button>
       </div>
@@ -193,7 +195,7 @@
         <div class="note" id="alignNote" hidden></div>
         <div class="chart" id="chartBox"><canvas id="cv" width="1200" height="560"></canvas><div class="tt" id="tt"></div></div>
         <div class="empty" id="empty" hidden>เลือกกองทุนทางซ้ายอย่างน้อย 1 กอง</div>
-        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" จะเริ่มนับจากวันที่ทุกกองมี NAV ครบ · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสีเส้น · วางใน PowerPoint: <b>Ctrl+V</b> หรือ <b>คลิกขวาที่รูปเก่า → Change Picture → From Clipboard</b></div>
+        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" จะเริ่มนับจากวันที่ทุกกองมี NAV ครบ · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสีเส้น</div>
       </div>
 
       <h3>ข้อมูลเบื้องต้น <small id="tblNote"></small><button class="btn ghost sm" id="copyTable">Copy ตาราง</button></h3>
@@ -297,9 +299,9 @@ function parseCSV(text) {
 async function onCSV(file) {
   try {
     const p = parseCSV(await file.text());
-    const name = ($("csvName").value.trim() || file.name.replace(/\.[^.]+$/, "")).slice(0, 40);
+    const name = ($("csvName").value.trim() || "FIXEDSP").slice(0, 40);
     CUSTOM = CUSTOM.filter(c => c.name !== name);
-    CUSTOM.unshift({ name, group: "จากไฟล์ CSV", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
+    CUSTOM.unshift({ name, group: "FIXEDSP", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
     store.set(CUSTOM.map(({ name, d, v, info }) => ({ name, d, v, info })));
     selected = [name, ...selected.filter(n => n !== name)].slice(0, MAX_SEL);
     $("csvName").value = "";
@@ -309,7 +311,7 @@ async function onCSV(file) {
 }
 
 /* ---------- เลือกกอง */
-const openGroups = new Set(["จากไฟล์ CSV"]);
+const openGroups = new Set(["FIXEDSP"]);
 document.addEventListener("toggle", (e) => {
   const g = e.target.dataset?.g; if (g == null) return;
   if (e.target.open) openGroups.add(g); else openGroups.delete(g);
@@ -575,40 +577,53 @@ function secVal(f, keys, fmt) {
 function tableModel() {
   const fs = selected.map(byName).filter(Boolean);
   const st = fs.map(f => stats(slice(f)));
+  const blank = () => fs.map(() => "");
+  const fx = (f) => { const v = f.sec?.exchange_rate_protection_policy; return v ? String(v).replace(/\s*\(.*$/, "") : ""; };
+  // หัวข้อตามตารางรายละเอียดกองในสไลด์ FIXEDSP · ช่องที่ยังไม่มีข้อมูลเว้นว่างไว้กรอกเอง
   const rows = [
-    ["ชื่อกองทุน", fs.map(f => f.info?.proj_name_th || "")],
     ["บลจ.", fs.map(f => amcShort(f.info?.comp_name_th) || "")],
-  ];
-  if (fs.some(f => f.risk)) rows.push(["ระดับความเสี่ยง", fs.map(f => f.risk ? String(f.risk) : "")]);
-  for (const [label, keys, fmt] of SEC_ROWS) { const vals = fs.map(f => secVal(f, keys, fmt)); if (vals.some(v => v)) rows.push([label, vals.map(v => v || "")]); }
-  rows.push(
-    ["NAV ล่าสุด", fs.map(f => f.custom ? "" : f.v.length ? `${f.v.at(-1).toFixed(4)} (${thDate(f.d.at(-1))})` : "")],
-    ["มีข้อมูลตั้งแต่", fs.map(f => f.d.length ? thDate(f.d[0]) : "")],
-    ...(fs.some(f => f.note) ? [["หมายเหตุข้อมูล", fs.map(f => f.note || "")]] : []),
+    ["นโยบายค่าเงิน", fs.map(fx)],
+    ["ความเสี่ยง", fs.map(f => f.risk ? String(f.risk) : "")],
+    ["สัดส่วนการลงทุน\nทั้งในและต่างประเทศ", blank()],
+    ["สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน", blank()],
+    ["อายุเฉลี่ยของตราสาร", blank()],
+    ["Yield to Maturity", blank()],
+    ["อัตราผลตอบแทนที่คาดหวัง 1 ปี", blank()],
+    ["Average Credit Rating", blank()],
+    ["Credit Rating ต่ำสุด\nที่กองทุนลงทุนในปัจจุบัน", blank()],
+    ["ระยะเวลาที่ควรถือลงทุน", blank()],
+    ["ค่าธรรมเนียมขาย\n(Front-End Fee)", blank()],
+    ["ค่าธรรมเนียมการจัดการ\n+ อื่น ๆ", blank()],
+    ["ระยะเวลารับเงินค่าขายคืน", blank()],
+    ["วันที่จดทะเบียนกองทุน", fs.map(f => secVal(f, ["regis_date"]) || "")],
+    ["ขนาดกองทุน (ล้านบาท)", blank()],
+    // ผลการดำเนินงานจาก NAV ในช่วงที่เลือก
     ["ผลตอบแทนช่วงที่เลือก", st.map(s => s ? { t: pct(s.ret), c: cls(s.ret) } : "")],
     ["ผลตอบแทนต่อปี", st.map(s => s && s.ann != null ? { t: pct(s.ann), c: cls(s.ann) } : "")],
     ["ลดลงสูงสุดจากจุดสูงสุด", st.map(s => s ? { t: s.mdd > -0.005 ? "0.00%" : pct(s.mdd), c: s.mdd < -0.005 ? "neg" : "" } : "")],
-    ["นับจากวันที่", st.map(s => s ? thDate(s.start) : "")],
-  );
-  return { fs, rows };
+    ...(fs.some(f => f.note) ? [["หมายเหตุข้อมูล", fs.map(f => f.note || "")]] : []),
+  ];
+  return { fs, rows, perfFrom: 16 };
 }
 function renderTable() {
-  const { fs, rows } = tableModel();
+  const { fs, rows, perfFrom } = tableModel();
   if (!fs.length) { $("tbl").innerHTML = ""; $("raw").innerHTML = ""; $("tblNote").textContent = ""; return; }
   $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}`;
-  const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v) || "–"}</td>`;
-  $("tbl").innerHTML = `<thead><tr><th></th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}</th>`).join("")}</tr></thead>` +
-    `<tbody>${rows.map(([l, vs]) => `<tr><th>${esc(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
+  const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v)}</td>`;
+  const lab = (l) => esc(l).replace(/\n/g, "<br>");
+  $("tbl").innerHTML = `<thead><tr><th>กองทุน</th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}</th>`).join("")}</tr></thead>` +
+    `<tbody>${rows.map(([l, vs], i) => `<tr${i === perfFrom ? ' class="perf"' : ""}><th>${lab(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
   $("raw").innerHTML = fs.filter(f => !f.custom).map(f =>
     `<div><b>${esc(f.name)}</b><dl>${Object.entries(f.sec || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(stripHtml(v))}</dd>`).join("")}</dl></div>`).join("") || "<div>ไม่มีข้อมูล</div>";
 }
 async function copyTable() {
   const { fs, rows } = tableModel(); if (!fs.length) return;
-  const txt = (v) => typeof v === "object" ? v.t : (v || "–");
-  const tsv = [["", ...fs.map(f => f.name)].join("\t"), ...rows.map(([l, vs]) => [l, ...vs.map(txt)].join("\t"))].join("\n");
-  const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:Tahoma,sans-serif;font-size:11pt;";
-  const html = `<table style="border-collapse:collapse"><tr><th style="${td}"></th>${fs.map(f => `<th style="${td}background:#1b3560;color:#fff">${esc(f.name)}</th>`).join("")}</tr>` +
-    rows.map(([l, vs]) => `<tr><td style="${td}font-weight:bold">${esc(l)}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
+  const txt = (v) => typeof v === "object" ? v.t : (v || "");
+  const tsv = [["กองทุน", ...fs.map(f => f.name)].join("\t"), ...rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
+  const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:Tahoma,sans-serif;font-size:11pt;text-align:center;";
+  const hd = td + "background:#1b3560;color:#fff;font-weight:bold;";
+  const html = `<table style="border-collapse:collapse"><tr><th style="${hd}">กองทุน</th>${fs.map(f => `<th style="${hd}">${esc(f.name)}</th>`).join("")}</tr>` +
+    rows.map(([l, vs]) => `<tr><td style="${hd}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
   } catch (e) { await navigator.clipboard.writeText(tsv); }
@@ -679,7 +694,7 @@ function update() {
 /* ---------- เริ่ม */
 (async function init() {
   try { COLORS = JSON.parse(localStorage.getItem(COLOR_STORE) || "{}") || {}; } catch (e) { COLORS = {}; }
-  CUSTOM = store.get().filter(c => c && c.name && Array.isArray(c.d)).map(c => ({ ...c, group: "จากไฟล์ CSV", custom: true, sec: {} }));
+  CUSTOM = store.get().filter(c => c && c.name && Array.isArray(c.d)).map(c => ({ ...c, group: "FIXEDSP", custom: true, sec: {} }));
   try {
     const r = await fetch("compare/data.json?v=" + Date.now());
     if (!r.ok) throw new Error(r.status);
