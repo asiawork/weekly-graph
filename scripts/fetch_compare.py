@@ -75,7 +75,7 @@ fn.NAV_DIR = DATA / "nav"
 PORT_FILE = ROOT / "docs" / "fixedsp" / "port.csv"   # กองในพอร์ต FIXEDSP (หน้าเว็บอ่านไฟล์เดียวกัน)
 STATS_URL = f"{fn.BASE}/factsheet/statistics"
 FEES_URL = f"{fn.BASE}/factsheet/fees"
-REDEMP_URL = f"{fn.BASE}/factsheet/subscription-redemption-period"
+REDEMP_URL = f"{fn.BASE}/factsheet/subscription-redemption-periods"
 URLS_URL = f"{fn.BASE}/factsheet/urls"
 
 
@@ -112,17 +112,30 @@ def load_extras():
         key = ckey(row.get("proj_id"), row.get("fund_class_name"))
         ex.setdefault(key, {})[k] = v
 
+    def put_fee(row):
+        # เก็บเฉพาะค่าธรรมเนียมที่ตารางใช้: ค่าธรรมเนียมขาย (front-end) และค่าใช้จ่ายรวม / ค่าธรรมเนียมการจัดการ
+        desc = str(row.get("fee_type_desc") or "").strip()
+        if not re.search(r"front|การขาย|รวม|total|การจัดการ|management", desc, re.I):
+            return
+        if re.search(r"ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch", desc, re.I) and not re.search(r"front", desc, re.I):
+            return
+        e = {"rate": row.get("rate"), "actual": row.get("actual_value")}
+        if e["actual"] in (None, "") and e["rate"] in (None, ""):
+            e["other"] = str(row.get("fee_other_desc") or "")[:80]
+        ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {}).setdefault("fees", {})[desc] = e
+
+    def put_redemp(row):
+        if str(row.get("type") or "").lower() != "redemption":
+            return
+        e = {k: row.get(k) for k in ("type", "period", "redemp_period_oth", "settlement_period") if row.get(k) not in (None, "")}
+        ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {})["redemp"] = [e]
+
     jobs = [
         ("statistics", STATS_URL, lambda row: (
             put(row, "duration", row.get("portfolio_duration_period")),
             put(row, "ytm", row.get("yield_to_maturity")))),
-        ("fees", FEES_URL, lambda row: ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {})
-            .setdefault("fees", {}).__setitem__(
-                str(row.get("fee_type_desc") or "").strip(),
-                {"rate": row.get("rate"), "actual": row.get("actual_value"), "other": row.get("fee_other_desc")})),
-        ("redemption", REDEMP_URL, lambda row: ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {})
-            .setdefault("redemp", []).append(
-                {k: row.get(k) for k in ("type", "period", "redemp_period_oth", "settlement_period") if row.get(k) not in (None, "")})),
+        ("fees", FEES_URL, put_fee),
+        ("redemption", REDEMP_URL, put_redemp),
     ]
     for label, url, fn_row in jobs:
         try:

@@ -745,7 +745,9 @@ function redempOf(f) {
   const rs = f?.x?.redemp || []; if (!rs.length) return "";
   const r = rs.find(x => /redemp|ขายคืน|รับซื้อคืน|^R$/i.test(String(x.type || ""))) || rs[0];
   const s = String(r.settlement_period ?? "").trim();
-  return /^\d+$/.test(s) ? `T+${s}` : (s || r.redemp_period_oth || "");
+  if (/^\d+$/.test(s)) return `T+${s}`;
+  const m = s.match(/^T\s*\+\s*(\d+)/i) || s.match(/(\d+)\s*วันทำการ/);
+  return m ? `T+${m[1]}` : (s || r.redemp_period_oth || "");
 }
 function fxShort(f) {
   const v = String(f?.sec?.exchange_rate_protection_policy || "");
