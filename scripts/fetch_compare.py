@@ -84,13 +84,23 @@ def read_list():
     return out
 
 
+SEC_KEEP = ["fund_status", "comp_name_th", "proj_name_th", "proj_name_en", "regis_date",
+            "investment_policy_desc", "management_style", "exchange_rate_protection_policy"]
+
+
 def scalar_fields(row: dict) -> dict:
-    """เก็บเฉพาะค่าเดี่ยวที่ไม่ว่าง จาก profile ดิบ (หน้าเว็บเลือกแสดงเอง)"""
+    """เก็บเฉพาะ field ที่หน้าเว็บใช้ (ตัด HTML ออกจากนโยบายลงทุน)"""
     keep = {}
-    for k, v in row.items():
-        if isinstance(v, (str, int, float, bool)) and str(v).strip() not in ("", "-", "None", "null"):
-            s = str(v).strip()
-            keep[k] = s if len(s) <= 400 else s[:400] + "…"
+    for k in SEC_KEEP:
+        v = row.get(k)
+        if v is None or str(v).strip() in ("", "-", "None", "null"):
+            continue
+        s = str(v).strip()
+        if k == "investment_policy_desc":
+            s = re.sub(r"<[^>]+>", " ", s).replace("&nbsp;", " ")
+            s = re.sub(r"\s+", " ", s).strip()
+            s = s if len(s) <= 3000 else s[:3000] + "…"
+        keep[k] = s
     return keep
 
 

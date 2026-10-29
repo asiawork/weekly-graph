@@ -113,6 +113,18 @@
   tr.perf th, tr.perf td { border-top: 3px solid var(--line); }
   td.num { white-space: nowrap; }
   .pos { color: var(--pos); } .neg { color: var(--neg); }
+  .infos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+  .info { background: var(--card); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 14px 16px; border-top: 4px solid var(--c, var(--navy)); }
+  .info h4 { margin: 0; font-size: 17px; color: var(--navy); }
+  .info .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; line-height: 1.45; }
+  .info dl { margin: 10px 0 0; display: grid; grid-template-columns: 148px 1fr; gap: 6px 10px; font-size: 13px; }
+  .info dt { color: var(--muted); } .info dd { margin: 0; }
+  .info .pol { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  .info .pol.open { display: block; }
+  .info .more { color: var(--navy); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .perf-t td, .perf-t th { text-align: right; }
+  .perf-t th:first-child, .perf-t td:first-child { text-align: left; }
+  .perf-t i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   details { margin-top: 10px; font-size: 13px; }
   details summary { cursor: pointer; color: var(--navy); font-weight: 500; }
   details .raw { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; margin-top: 8px; }
@@ -200,9 +212,14 @@
         <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" จะเริ่มนับจากวันที่ทุกกองมี NAV ครบ · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสีเส้น</div>
       </div>
 
-      <h3>ข้อมูลเบื้องต้น <small id="tblNote"></small><button class="btn ghost sm" id="copyTable">Copy ตาราง</button></h3>
+      <h3>ข้อมูลกองทุน</h3>
+      <div class="infos" id="infos"></div>
+
+      <h3>ผลตอบแทน <small id="tblNote"></small></h3>
+      <div class="tbl-wrap card" style="padding:0"><table id="perf" class="perf-t"></table></div>
+
+      <h3>ตารางรายละเอียด <button class="btn ghost sm" id="copyTable">Copy ตาราง</button></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="tbl"></table></div>
-      <details id="rawBox"><summary>ข้อมูลทั้งหมดจาก SEC ของกองที่เลือก</summary><div class="raw" id="raw"></div></details>
       <div class="notice" id="notice" hidden></div>
     </section>
   </div>
@@ -578,15 +595,55 @@ function secVal(f, keys, fmt) {
   for (const k of keys) { const v = f.sec?.[k]; if (v != null && String(v).trim()) return /date/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v) ? thDate(v.slice(0, 10)) : fmt ? fmt(v) : v; }
   return null;
 }
+// รหัส management_style ตามคู่มือ SEC (/v2/fund/general-info/profiles)
+const STYLE = {
+  AM: "Active – มุ่งให้ผลตอบแทนสูงกว่าดัชนีชี้วัด",
+  AN: "Feeder – กองหลักมุ่งให้ผลตอบแทนสูงกว่าดัชนีชี้วัด",
+  PM: "Passive – ตามดัชนีชี้วัด",
+  PN: "Feeder – กองหลักเคลื่อนไหวตามดัชนีชี้วัด",
+  IM: "Inverse – ตรงข้ามกับดัชนีอ้างอิงรายวัน",
+  IN: "Feeder – กองหลักแบบ Inverse",
+  LM: "Leveraged – ทวีคูณกับดัชนีอ้างอิงรายวัน",
+  LN: "Feeder – กองหลักแบบ Leveraged",
+  BH: "Buy-and-hold – ลงทุนครั้งเดียว",
+  SM: "ตามดัชนีชี้วัด และบางโอกาสอาจสูงกว่าดัชนี",
+  OT: "อื่น ๆ",
+};
+const fxText = (f) => { const v = f.sec?.exchange_rate_protection_policy; return v ? String(v).replace(/\s*\(.*$/, "") : ""; };
+function renderInfos() {
+  const fs = selected.map(byName).filter(Boolean);
+  $("infos").innerHTML = fs.map(f => {
+    const sec = f.sec || {}, st = sec.management_style;
+    const rows = f.custom ? [] : [
+      ["บลจ.", amcShort(sec.comp_name_th || f.info?.comp_name_th)],
+      ["วันที่จดทะเบียนกองทุน", secVal(f, ["regis_date"])],
+      ["นโยบายค่าเงิน", fxText(f)],
+      ["กลยุทธ์การลงทุน", st ? (STYLE[st] || st) : ""],
+      ["นโยบายลงทุน", sec.investment_policy_desc ? `<div class="pol" title="คลิกเพื่ออ่านทั้งหมด">${esc(stripHtml(sec.investment_policy_desc))}</div>` : "", true],
+    ];
+    const names = f.custom ? "ข้อมูลที่อัปโหลดจากไฟล์ CSV" : [sec.proj_name_th || f.info?.proj_name_th, sec.proj_name_en].filter(Boolean).map(esc).join("<br>");
+    return `<div class="info" style="--c:${colorOf(f.name)}"><h4>${esc(f.name)}${ipoTag(f)}</h4><div class="sub">${names}</div>` +
+      (rows.length ? `<dl>${rows.map(([k, v, raw]) => `<dt>${k}</dt><dd>${v ? (raw ? v : esc(v)) : "–"}</dd>`).join("")}</dl>` : "") + `</div>`;
+  }).join("");
+}
+$("infos").addEventListener("click", (e) => { const p = e.target.closest(".pol"); if (p) p.classList.toggle("open"); });
+function renderPerf() {
+  const fs = selected.map(byName).filter(Boolean);
+  $("perf").innerHTML = !fs.length ? "" : `<thead><tr><th>กองทุน</th><th>ผลตอบแทนช่วงที่เลือก</th><th>ผลตอบแทนต่อปี</th><th>ลดลงสูงสุดจากจุดสูงสุด</th></tr></thead><tbody>` +
+    fs.map(f => { const s = stats(slice(f)); const c = (v, t) => `<td class="${cls(v)}">${t}</td>`;
+      return `<tr><td><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}${ipoTag(f)}</td>` +
+        (s ? c(s.ret, pct(s.ret)) + (s.ann != null ? c(s.ann, pct(s.ann)) : "<td>–</td>") + `<td class="${s.mdd < -0.005 ? "neg" : ""}">${s.mdd > -0.005 ? "0.00%" : pct(s.mdd)}</td>` : "<td>–</td><td>–</td><td>–</td>") +
+        `</tr>` + (f.note ? `<tr><td colspan="4"><small>${esc(f.name)}: ${esc(f.note)}</small></td></tr>` : "");
+    }).join("") + `</tbody>`;
+}
 function tableModel() {
   const fs = selected.map(byName).filter(Boolean);
   const st = fs.map(f => stats(slice(f)));
   const blank = () => fs.map(() => "");
-  const fx = (f) => { const v = f.sec?.exchange_rate_protection_policy; return v ? String(v).replace(/\s*\(.*$/, "") : ""; };
   // หัวข้อตามตารางรายละเอียดกองในสไลด์ FIXEDSP · ช่องที่ยังไม่มีข้อมูลเว้นว่างไว้กรอกเอง
   const rows = [
-    ["บลจ.", fs.map(f => amcShort(f.info?.comp_name_th) || "")],
-    ["นโยบายค่าเงิน", fs.map(fx)],
+    ["บลจ.", fs.map(f => amcShort(f.sec?.comp_name_th || f.info?.comp_name_th) || "")],
+    ["นโยบายค่าเงิน", fs.map(fxText)],
     ["ความเสี่ยง", fs.map(f => f.risk ? String(f.risk) : "")],
     ["สัดส่วนการลงทุน\nทั้งในและต่างประเทศ", blank()],
     ["สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน", blank()],
@@ -601,24 +658,18 @@ function tableModel() {
     ["ระยะเวลารับเงินค่าขายคืน", blank()],
     ["วันที่จดทะเบียนกองทุน", fs.map(f => secVal(f, ["regis_date"]) || "")],
     ["ขนาดกองทุน (ล้านบาท)", blank()],
-    // ผลการดำเนินงานจาก NAV ในช่วงที่เลือก
-    ["ผลตอบแทนช่วงที่เลือก", st.map(s => s ? { t: pct(s.ret), c: cls(s.ret) } : "")],
-    ["ผลตอบแทนต่อปี", st.map(s => s && s.ann != null ? { t: pct(s.ann), c: cls(s.ann) } : "")],
-    ["ลดลงสูงสุดจากจุดสูงสุด", st.map(s => s ? { t: s.mdd > -0.005 ? "0.00%" : pct(s.mdd), c: s.mdd < -0.005 ? "neg" : "" } : "")],
-    ...(fs.some(f => f.note) ? [["หมายเหตุข้อมูล", fs.map(f => f.note || "")]] : []),
   ];
-  return { fs, rows, perfFrom: 16 };
+  return { fs, rows, perfFrom: -1 };
 }
 function renderTable() {
   const { fs, rows, perfFrom } = tableModel();
-  if (!fs.length) { $("tbl").innerHTML = ""; $("raw").innerHTML = ""; $("tblNote").textContent = ""; return; }
+  renderInfos(); renderPerf();
+  if (!fs.length) { $("tbl").innerHTML = ""; $("tblNote").textContent = ""; return; }
   $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}`;
   const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v)}</td>`;
   const lab = (l) => esc(l).replace(/\n/g, "<br>");
   $("tbl").innerHTML = `<thead><tr><th>กองทุน</th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}${ipoTag(f)}</th>`).join("")}</tr></thead>` +
     `<tbody>${rows.map(([l, vs], i) => `<tr${i === perfFrom ? ' class="perf"' : ""}><th>${lab(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
-  $("raw").innerHTML = fs.filter(f => !f.custom).map(f =>
-    `<div><b>${esc(f.name)}</b><dl>${Object.entries(f.sec || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(stripHtml(v))}</dd>`).join("")}</dl></div>`).join("") || "<div>ไม่มีข้อมูล</div>";
 }
 async function copyTable() {
   const { fs, rows } = tableModel(); if (!fs.length) return;
@@ -655,7 +706,7 @@ $("print").onclick = () => {
   $("rTitle").textContent = $("title").value.trim() || "เปรียบเทียบผลตอบแทน " + selected.join(" · ");
   $("rMeta").textContent = `ช่วงข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
   $("rImg").src = exportCanvas(2).toDataURL("image/png");
-  $("rTbl").innerHTML = `<table>${$("tbl").innerHTML}</table>`;
+  $("rTbl").innerHTML = `<table>${$("perf").innerHTML}</table><table>${$("tbl").innerHTML}</table>`;
   const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
   setTimeout(() => { window.print(); document.title = old; }, 150);
 };
