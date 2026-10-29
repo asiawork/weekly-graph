@@ -35,6 +35,13 @@
   .opt:hover { background: var(--bg); }
   .opt input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
   .opt .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .opt input[type=color] { width: 22px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; flex: none; }
+  .opt input[type=color]::-webkit-color-swatch-wrapper { padding: 1px; }
+  .opt input[type=color]::-webkit-color-swatch { border: 0; border-radius: 3px; }
+  .side .reset { font: inherit; font-size: 12.5px; color: var(--navy); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; margin-left: 6px; }
+  .align { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+  .align input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
+  .note { font-size: 12.5px; color: #7a4b00; margin: -4px 0 8px; }
   .opt .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .opt .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
   .opt .x:hover { color: var(--neg); }
@@ -167,13 +174,15 @@
             <button data-q="1M">1M</button><button data-q="3M">3M</button><button data-q="6M">6M</button><button data-q="YTD">YTD</button><button data-q="1Y">1Y</button><button data-q="3Y">3Y</button><button data-q="ALL">ทั้งหมด</button>
           </div>
           <div class="dates"><input type="date" id="dFrom" aria-label="วันเริ่ม"> ถึง <input type="date" id="dTo" aria-label="วันสิ้นสุด"></div>
+          <label class="align"><input type="checkbox" id="align" checked> ทุกเส้นเริ่มวันเดียวกัน</label>
         </div>
         <div class="slider" id="slider"><div class="track"></div><div class="fill" id="fill"></div>
           <input type="range" id="sA" min="0" max="1" value="0" aria-label="วันเริ่ม">
           <input type="range" id="sB" min="0" max="1" value="1" aria-label="วันสิ้นสุด"></div>
+        <div class="note" id="alignNote" hidden></div>
         <div class="chart" id="chartBox"><canvas id="cv" width="1200" height="560"></canvas><div class="tt" id="tt"></div></div>
         <div class="empty" id="empty" hidden>เลือกกองทุนทางซ้ายอย่างน้อย 1 กอง</div>
-        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก (กองที่เริ่มทีหลังจะนับจากวันแรกที่มี NAV) · วางใน PowerPoint: <b>Ctrl+V</b> หรือ <b>คลิกขวาที่รูปเก่า → Change Picture → From Clipboard</b></div>
+        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" จะเริ่มนับจากวันที่ทุกกองมี NAV ครบ · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสีเส้น · วางใน PowerPoint: <b>Ctrl+V</b> หรือ <b>คลิกขวาที่รูปเก่า → Change Picture → From Clipboard</b></div>
       </div>
 
       <h3>ข้อมูลเบื้องต้น <small id="tblNote"></small><button class="btn ghost sm" id="copyTable">Copy ตาราง</button></h3>
@@ -201,7 +210,7 @@ const $ = (id) => document.getElementById(id);
 const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5", "#2f9e5b", "#7a8794"];
 const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-const STORE = "compare-custom-v1";
+const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
 const W = 1200, H = 560, FONT = '"IBM Plex Sans Thai", system-ui, sans-serif';
 
 let DATA = { funds: [], missing: {} };
@@ -210,6 +219,7 @@ let selected = [];        // ชื่อกองตามลำดับที
 let ALLD = [];            // วันที่ทั้งหมด (ISO) เรียงแล้ว
 let range = { s: null, e: null, q: "1Y" };
 let layout = null;        // ไว้ใช้กับ tooltip
+let COLORS = {};          // สีที่เลือกเอง {ชื่อกอง: "#rrggbb"}
 
 /* ---------- utils */
 const thDate = (iso) => { if (!iso) return "–"; const [y, m, d] = iso.split("-"); return `${+d} ${TH_MON[+m - 1]} ${(+y + 543) % 100}`; };
@@ -226,7 +236,8 @@ const store = {
 
 const allSeries = () => [...CUSTOM, ...DATA.funds];
 const byName = (n) => allSeries().find(f => f.name === n);
-const colorOf = (n) => PALETTE[selected.indexOf(n) % PALETTE.length];
+const colorOf = (n) => COLORS[n] || PALETTE[Math.max(0, selected.indexOf(n)) % PALETTE.length];
+const saveColors = () => { try { localStorage.setItem(COLOR_STORE, JSON.stringify(COLORS)); } catch (e) {} };
 
 /* ---------- CSV */
 function parseDateCell(s) {
@@ -299,10 +310,10 @@ function renderList() {
     `<div class="grp"><div class="grp-name">${esc(g)}</div>` + fs.map(f => {
       const on = selected.includes(f.name);
       return `<label class="opt" title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
-        `<span class="sw" style="background:${on ? colorOf(f.name) : "transparent"}"></span><span class="nm">${esc(f.name)}</span>` +
+        (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) + `<span class="nm">${esc(f.name)}</span>` +
         (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
     }).join("") + `</div>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
-  $("count").textContent = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง`;
+  $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
 }
 $("list").addEventListener("change", (e) => {
   const n = e.target.dataset.n; if (!n) return;
@@ -321,6 +332,13 @@ $("list").addEventListener("click", (e) => {
   rebuildDates(); renderList(); update();
 });
 $("q").addEventListener("input", renderList);
+$("list").addEventListener("input", (e) => {
+  const n = e.target.dataset.c; if (!n) return;
+  COLORS[n] = e.target.value; saveColors(); renderChart(); renderTable(); saveHash();
+});
+$("list").addEventListener("change", (e) => { if (e.target.dataset.c) renderList(); });
+$("count").addEventListener("click", (e) => { if (e.target.id === "resetColors") { COLORS = {}; saveColors(); renderList(); update(); } });
+$("align").onchange = update;
 $("csvBtn").onclick = () => $("csvFile").click();
 $("csvFile").onchange = (e) => { if (e.target.files[0]) onCSV(e.target.files[0]); e.target.value = ""; };
 
@@ -368,9 +386,16 @@ $("dFrom").onchange = () => { if ($("dFrom").value) { range = { s: $("dFrom").va
 $("dTo").onchange = () => { if ($("dTo").value) { range = { s: range.s, e: $("dTo").value, q: null }; applyQuick(null); } };
 
 /* ---------- คำนวณ */
+// วันเริ่มนับจริง: ถ้าติ๊ก "เริ่มวันเดียวกัน" = วันที่ทุกกองที่เลือกมี NAV แล้ว
+function startInfo() {
+  const fs = selected.map(byName).filter(f => f && f.d.length);
+  let s = range.s, late = null;
+  if ($("align").checked) for (const f of fs) { const first = f.d.find(x => x >= range.s); if (first && first > s && first < range.e) { s = first; late = f; } }
+  return { s, late };
+}
 function slice(f) {
-  const out = [];
-  for (let i = 0; i < f.d.length; i++) if (f.d[i] >= range.s && f.d[i] <= range.e) out.push([f.d[i], f.v[i]]);
+  const out = [], s0 = startInfo().s;
+  for (let i = 0; i < f.d.length; i++) if (f.d[i] >= s0 && f.d[i] <= range.e) out.push([f.d[i], f.v[i]]);
   return out;
 }
 function stats(pts) {
@@ -404,7 +429,7 @@ function draw(ctx, opts = {}) {
   if (title) { ctx.font = `600 26px ${FONT}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
   if (!ser.length) { ctx.restore(); layout = null; return; }
 
-  const x0 = dnum(range.s), x1 = Math.max(dnum(range.e), x0 + 1);
+  const x0 = dnum(startInfo().s), x1 = Math.max(dnum(range.e), x0 + 1);
   let y0 = Math.min(0, ...ser.flatMap(s => s.pts.map(p => p[1]))), y1 = Math.max(0, ...ser.flatMap(s => s.pts.map(p => p[1])));
   if (y1 - y0 < 0.05) { y1 += 0.05; }
   const pad = (y1 - y0) * 0.06; y1 += pad; if (y0 < 0) y0 -= pad;
@@ -480,7 +505,7 @@ function draw(ctx, opts = {}) {
   // ช่วงข้อมูล
   if (opts.stamp !== false) {
     ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(`ข้อมูล ${thDate(range.s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, W - 16, H - 10);
+    ctx.fillText(`ข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, W - 16, H - 10);
   }
   ctx.restore();
 }
@@ -540,6 +565,7 @@ function tableModel() {
   rows.push(
     ["NAV ล่าสุด", fs.map(f => f.custom ? "" : f.v.length ? `${f.v.at(-1).toFixed(4)} (${thDate(f.d.at(-1))})` : "")],
     ["มีข้อมูลตั้งแต่", fs.map(f => f.d.length ? thDate(f.d[0]) : "")],
+    ...(fs.some(f => f.note) ? [["หมายเหตุข้อมูล", fs.map(f => f.note || "")]] : []),
     ["ผลตอบแทนช่วงที่เลือก", st.map(s => s ? { t: pct(s.ret), c: cls(s.ret) } : "")],
     ["ผลตอบแทนต่อปี", st.map(s => s && s.ann != null ? { t: pct(s.ann), c: cls(s.ann) } : "")],
     ["ลดลงสูงสุดจากจุดสูงสุด", st.map(s => s ? { t: s.mdd > -0.005 ? "0.00%" : pct(s.mdd), c: s.mdd < -0.005 ? "neg" : "" } : "")],
@@ -550,7 +576,7 @@ function tableModel() {
 function renderTable() {
   const { fs, rows } = tableModel();
   if (!fs.length) { $("tbl").innerHTML = ""; $("raw").innerHTML = ""; $("tblNote").textContent = ""; return; }
-  $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(range.s)} – ${thDate(range.e)}`;
+  $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}`;
   const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v) || "–"}</td>`;
   $("tbl").innerHTML = `<thead><tr><th></th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}</th>`).join("")}</tr></thead>` +
     `<tbody>${rows.map(([l, vs]) => `<tr><th>${esc(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
@@ -589,7 +615,7 @@ $("download").onclick = async () => {
 $("print").onclick = () => {
   if (!selected.length) return;
   $("rTitle").textContent = $("title").value.trim() || "เปรียบเทียบผลตอบแทน " + selected.join(" · ");
-  $("rMeta").textContent = `ช่วงข้อมูล ${thDate(range.s)} – ${thDate(range.e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
+  $("rMeta").textContent = `ช่วงข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
   $("rImg").src = exportCanvas(2).toDataURL("image/png");
   $("rTbl").innerHTML = `<table>${$("tbl").innerHTML}</table>`;
   const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
@@ -604,6 +630,9 @@ function saveHash() {
   if (selected.length) p.set("f", selected.join("|"));
   if (range.q) p.set("q", range.q); else { p.set("s", range.s || ""); p.set("e", range.e || ""); }
   if ($("title").value.trim()) p.set("t", $("title").value.trim());
+  const cs = selected.filter(n => COLORS[n]).map(n => n + ":" + COLORS[n].slice(1));
+  if (cs.length) p.set("c", cs.join("|"));
+  if (!$("align").checked) p.set("a", "0");
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) {}
 }
 function loadHash() {
@@ -613,6 +642,8 @@ function loadHash() {
   if (p.get("q")) range.q = p.get("q");
   else if (p.get("s") && p.get("e")) range = { s: p.get("s"), e: p.get("e"), q: null };
   if (p.get("t")) $("title").value = p.get("t");
+  for (const kv of (p.get("c") || "").split("|")) { const i = kv.lastIndexOf(":"); if (i > 0 && /^[0-9a-f]{6}$/i.test(kv.slice(i + 1))) COLORS[kv.slice(0, i)] = "#" + kv.slice(i + 1); }
+  if (p.get("a") === "0") $("align").checked = false;
 }
 
 function update() {
@@ -620,11 +651,15 @@ function update() {
   const any = selected.some(n => byName(n));
   $("chartBox").hidden = !any; $("empty").hidden = any;
   ["copy", "download", "print", "copyTable"].forEach(id => $(id).disabled = !any);
+  const si = startInfo();
+  $("alignNote").hidden = !(any && si.late);
+  if (si.late) $("alignNote").textContent = `เริ่มนับ ${thDate(si.s)} เพราะ ${si.late.name} มีข้อมูลตั้งแต่วันนั้น (เอาติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" ออกถ้าอยากเห็นช่วงก่อนหน้าของกองอื่น)`;
   renderChart(); renderTable(); saveHash();
 }
 
 /* ---------- เริ่ม */
 (async function init() {
+  try { COLORS = JSON.parse(localStorage.getItem(COLOR_STORE) || "{}") || {}; } catch (e) { COLORS = {}; }
   CUSTOM = store.get().filter(c => c && c.name && Array.isArray(c.d)).map(c => ({ ...c, group: "จากไฟล์ CSV", custom: true, sec: {} }));
   try {
     const r = await fetch("compare/data.json?v=" + Date.now());
