@@ -16,6 +16,7 @@
 import csv
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -27,6 +28,15 @@ ROOT = fn.ROOT
 DATA = ROOT / "data" / "compare"
 OUT = ROOT / "docs" / "compare"
 YEARS = int(os.getenv("COMPARE_YEARS", "3"))
+# เพิ่มกองตลาดเงิน (ความเสี่ยงระดับ 1–2) ทุกกองให้อัตโนมัติ จากนโยบายการลงทุนใน SEC profiles
+AUTO_MM = os.getenv("AUTO_MONEY_MARKET", "1") == "1"
+MM_GROUP = "ตลาดเงิน"
+
+
+def is_money_market(p: dict) -> bool:
+    txt = re.sub(r"<[^>]+>", " ", str(p.get("investment_policy_desc") or ""))
+    txt = re.sub(r"\s+", "", txt)
+    return "กองทุนรวมตลาดเงิน" in txt and "ไม่ใช่กองทุนรวมตลาดเงิน" not in txt and "ไม่เป็นกองทุนรวมตลาดเงิน" not in txt
 
 # ให้ fetch_series ของ fetch_nav.py เขียนลงโฟลเดอร์ของหน้าเปรียบเทียบแทนโฟลเดอร์เดิม
 fn.NAV_DIR = DATA / "nav"
@@ -56,7 +66,7 @@ def scalar_fields(row: dict) -> dict:
 
 def stitch_old_class(info, start, series):
     """class ที่เพิ่งแยกออกมา (เช่น K-CASH-A): NAV ก่อนวันแรกของ class อยู่ใต้ class เดิม
-    ดึงช่วงที่ขาด แยกตาม class แล้วต่อเฉพาะ class ที่ NAV ต่อเนื่องกัน (ต่างกันไม่เกิน 1% ที่รอยต่อ)
+    ดึงช่วงที่ขาด แยกตาม class แล้วต่อเฉพาะ class ที่ NAV ต่อเนื่องกัน (ต่างกันไม่เกิน 0.5% ที่รอยต่อ)
     คืน (series ใหม่, ข้อความหมายเหตุ หรือ None)"""
     if not series or not info["fund_class_name"]:
         return series, None
@@ -95,7 +105,7 @@ def stitch_old_class(info, start, series):
         if (first - last).days > 7:
             continue
         gap = abs(ser[last] / base - 1)
-        if gap <= 0.01 and (best is None or gap < best[1]):
+        if gap <= 0.005 and (best is None or gap < best[1]):
             best = (cls_name, gap, ser)
     if not best:
         return series, None
@@ -132,7 +142,29 @@ def main():
     start = today - timedelta(days=round(365.25 * YEARS) + 7)
 
     resolved, missing = {}, {}
+    if AUTO_MM:
+        listed = {fn.norm(f["name"]) for f in funds}
+        added = 0
+        for p in profiles:
+            if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not is_money_market(p):
+                continue
+            cls = str(p.get("fund_class_name") or "").strip()
+            cls = "" if cls.lower() in ("main", "none", "nan") else cls
+            name = cls or str(p.get("proj_abbr_name") or "").strip()
+            if not name or fn.norm(name) in listed:
+                continue
+            listed.add(fn.norm(name))
+            funds.append({"name": name, "group": MM_GROUP, "auto": True})
+            resolved[name] = {
+                "proj_id": p.get("proj_id"), "proj_abbr_name": str(p.get("proj_abbr_name") or "").strip(),
+                "fund_class_name": cls, "proj_name_th": p.get("proj_name_th"),
+                "comp_name_th": p.get("comp_name_th"), "name": name,
+            }
+            added += 1
+        print(f"เพิ่มกองตลาดเงินอัตโนมัติ {added} กอง")
     for f in funds:
+        if f["name"] in resolved:
+            continue
         res = fn.resolve(f["name"], by_class, by_abbr)
         if res is None:
             missing[f["name"]] = "ไม่พบชื่อนี้ใน SEC (เช็คชื่อย่อ/ชื่อ class)"
