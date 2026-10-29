@@ -171,24 +171,28 @@ def is_tax_fund(p: dict) -> bool:
     return bool(TAX_NAME.search(names) or TAX_TH.search(th))
 
 
-# class ที่ไม่ใช่ class หลัก (ดูจากชื่อชนิดหน่วยลงทุน)
-NOT_MAIN = re.compile(r"ปันผล|ขายคืนอัตโนมัติ|อิเล็กทรอนิกส์|ออนไลน์|สถาบัน|นิติบุคคล|ผู้มีเงินลงทุนสูง|พิเศษ|กองทุนสำรองเลี้ยงชีพ"
+# class อื่นที่ไม่เอา แม้ชื่อจะมีคำว่าสะสมมูลค่า/ปันผล (ขายคืนอัตโนมัติ ช่องทางออนไลน์ สถาบัน ฯลฯ)
+NOT_MAIN = re.compile(r"อัตโนมัติ|อิเล็กทรอนิกส์|ออนไลน์|สถาบัน|นิติบุคคล|ผู้มีเงินลงทุนสูง|พิเศษ|กองทุนสำรองเลี้ยงชีพ"
                       r"|เพื่อการออม|เลี้ยงชีพ|ช่องทาง|ไม่ใช่รายย่อย")
+KEEP_CLASS = re.compile(r"สะสมมูลค่า|ปันผล")
 
 
-def class_score(p: dict):
-    """คะแนนว่า class นี้เป็น class หลักแค่ไหน (สูง = หลัก) None = ไม่เอา"""
-    cls = str(p.get("fund_class_name") or "").strip()
-    if cls.lower() in ("", "main", "none", "nan"):
-        return 10                                    # กองที่ไม่มีหลาย class
+def is_main_fund(p: dict) -> bool:
+    return str(p.get("fund_class_name") or "").strip().lower() in ("", "main", "none", "nan")
+
+
+def keep_class(p: dict) -> bool:
+    """กองที่มีหลาย class: เอาเฉพาะชนิดสะสมมูลค่า และชนิดจ่ายปันผล"""
     detail = str(p.get("fund_class_detail") or "")
-    sc = 0
-    if NOT_MAIN.search(detail):
-        sc -= 5
-    if re.search(r"สะสมมูลค่า|ทั่วไป", detail):
+    return bool(KEEP_CLASS.search(detail)) and not NOT_MAIN.search(detail)
+
+
+def fallback_score(p: dict) -> int:
+    """กองที่ไม่มีชนิดสะสมมูลค่า/ปันผลเลย (เช่น KKP CASH ชนิดทั่วไป) เลือก class ทั่วไปมา 1 class"""
+    detail = str(p.get("fund_class_detail") or "")
+    sc = 0 if not NOT_MAIN.search(detail) else -5
+    if re.search(r"ทั่วไป", detail):
         sc += 3
-    if re.search(r"-A$|A$", cls.upper()) and not re.search(r"-(AR|AD|AI)$", cls.upper()):
-        sc += 2
     return sc
 
 
@@ -320,8 +324,8 @@ def main():
 
     if AUTO_MM:
         listed = {fn.norm(f["name"]) for f in funds}
-        # เลือก class หลักกองละ 1 class และตัดกองลดหย่อนภาษี
-        best = {}
+        # กองไม่มีหลาย class: เอาทั้งกอง · มีหลาย class: เอาชนิดสะสมมูลค่า + จ่ายปันผล · ตัดกองลดหย่อนภาษี
+        by_pid = {}
         for p in profiles:
             if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not low_risk(p):
                 continue
@@ -330,14 +334,18 @@ def main():
                 continue
             if is_tax_fund(p):
                 continue
-            sc = class_score(p)
-            if sc is None:
-                continue
-            pid = p.get("proj_id")
-            if pid not in best or sc > best[pid][0]:
-                best[pid] = (sc, p)
+            by_pid.setdefault(p.get("proj_id"), []).append(p)
+        picks = []
+        for pid, ps in by_pid.items():
+            mains = [p for p in ps if is_main_fund(p)]
+            keep = mains or [p for p in ps if keep_class(p)]
+            if not keep:
+                best = max(ps, key=fallback_score)
+                keep = [best] if fallback_score(best) >= 0 else []
+            picks.extend(keep)
         added = 0
-        for pid, (_, p) in best.items():
+        for p in picks:
+            pid = p.get("proj_id")
             cls = str(p.get("fund_class_name") or "").strip()
             cls = "" if cls.lower() in ("main", "none", "nan") else cls
             name = cls or str(p.get("proj_abbr_name") or "").strip()
@@ -352,7 +360,7 @@ def main():
                 "comp_name_th": p.get("comp_name_th"), "name": name,
             }
             added += 1
-        print(f"เพิ่มกองความเสี่ยง {sorted(MM_LEVELS)} อัตโนมัติ {added} กอง (class หลัก, ไม่รวมกองภาษี)")
+        print(f"เพิ่มกองความเสี่ยง {sorted(MM_LEVELS)} อัตโนมัติ {added} กอง (สะสมมูลค่า/ปันผล, ไม่รวมกองภาษี)")
     for f in funds:
         if f["name"] in resolved:
             continue
@@ -424,6 +432,13 @@ def main():
         })
 
     DATA.mkdir(parents=True, exist_ok=True)
+    keep_files = {f"{fn.slug(x['info']['name'])}.csv" for x in out_funds}
+    removed = 0
+    for old in fn.NAV_DIR.glob("*.csv"):
+        if old.name not in keep_files:
+            old.unlink(); removed += 1
+    notes = {k: v for k, v in notes.items() if any(x["name"] == k for x in out_funds)}
+    print(f"ลบ NAV ของกองที่ไม่ใช้แล้ว {removed} ไฟล์")
     notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
     OUT.mkdir(parents=True, exist_ok=True)
     payload = {
