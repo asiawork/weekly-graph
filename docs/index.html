@@ -16,6 +16,14 @@
   body { margin: 0; background: var(--bg); color: var(--ink);
          font-family: "IBM Plex Sans Thai", system-ui, sans-serif; font-size: 15px; }
   header { background: var(--navy); color: #fff; padding: 22px 16px 26px; }
+  /* แท็บสลับหน้า */
+  header.has-tabs { padding-bottom: 0; }
+  header .wrap.tabs { display: flex; justify-content: flex-start; align-items: end; gap: 4px; margin-top: 18px; overflow-x: auto; flex-wrap: nowrap; }
+  .tabs a { color: #fff; opacity: .8; text-decoration: none; font-size: 15px; font-weight: 600; padding: 10px 18px;
+            border-radius: 10px 10px 0 0; white-space: nowrap; }
+  .tabs a:hover { opacity: 1; background: rgba(255,255,255,.1); }
+  .tabs a[aria-current="page"] { opacity: 1; background: var(--bg); color: var(--navy); }
+
   .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
   header .wrap { padding: 0; display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: .2px; }
@@ -106,14 +114,15 @@
 </style>
 </head>
 <body>
-<header>
+<header class="has-tabs">
   <div class="wrap">
     <div>
       <h1>Top Funds Weekly Charts</h1>
-      <p>กราฟ NAV สำหรับรายงาน Top Funds Weekly Market Recap · อัปเดตอัตโนมัติทุกวันจันทร์เช้า · <a href="compare.html" style="color:#fff">เปรียบเทียบกองทุน →</a></p>
+      <p>กราฟ NAV สำหรับรายงาน Top Funds Weekly Market Recap · อัปเดตอัตโนมัติทุกวันจันทร์เช้า</p>
     </div>
     <div class="asof" id="asof">กำลังโหลด…</div>
   </div>
+  <nav class="wrap tabs" aria-label="หน้า"><a href="index.html" aria-current="page">Top Funds Weekly Charts</a><a href="compare.html">เปรียบเทียบ FIXEDSP</a></nav>
 </header>
 
 <main class="wrap">
