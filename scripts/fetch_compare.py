@@ -30,8 +30,14 @@ OUT = ROOT / "docs" / "compare"
 YEARS = int(os.getenv("COMPARE_YEARS", "3"))
 # เพิ่มกองความเสี่ยงระดับ 1–2 (กองตลาดเงิน) ทุกกองให้อัตโนมัติ จาก /v2/fund/factsheet/risk-spectrum
 AUTO_MM = os.getenv("AUTO_MONEY_MARKET", "1") == "1"
-MM_LEVELS = {1, 2}
-MM_GROUP = "ตลาดเงิน (ความเสี่ยง 1–2)"
+MM_LEVELS = {int(x) for x in os.getenv("RISK_LEVELS", "1,2,3,4").split(",") if x.strip()}
+LEVEL_GROUP = {
+    1: "ความเสี่ยง 1 · ตลาดเงิน (ในประเทศ)",
+    2: "ความเสี่ยง 2 · ตลาดเงิน (ต่างประเทศบางส่วน)",
+    3: "ความเสี่ยง 3 · พันธบัตรรัฐบาล",
+    4: "ความเสี่ยง 4 · ตราสารหนี้",
+}
+MM_GROUP = "ตลาดเงิน"  # ใช้ตอนดึงระดับความเสี่ยงไม่ได้
 RISK_URL = f"{fn.BASE}/factsheet/risk-spectrum"
 
 
@@ -183,20 +189,24 @@ def main():
         for p in profiles:
             if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not low_risk(p):
                 continue
+            # ตัดกองปิดที่มีอายุโครงการ (term fund) เทียบกับพอร์ตเปิดไม่ได้
+            if str(p.get("proj_term_flag") or "N").strip().upper() not in ("N", ""):
+                continue
             cls = str(p.get("fund_class_name") or "").strip()
             cls = "" if cls.lower() in ("main", "none", "nan") else cls
             name = cls or str(p.get("proj_abbr_name") or "").strip()
             if not name or fn.norm(name) in listed:
                 continue
             listed.add(fn.norm(name))
-            funds.append({"name": name, "group": MM_GROUP, "auto": True})
+            lv = risk.get(p.get("proj_id"))
+            funds.append({"name": name, "group": LEVEL_GROUP.get(lv, MM_GROUP), "auto": True})
             resolved[name] = {
                 "proj_id": p.get("proj_id"), "proj_abbr_name": str(p.get("proj_abbr_name") or "").strip(),
                 "fund_class_name": cls, "proj_name_th": p.get("proj_name_th"),
                 "comp_name_th": p.get("comp_name_th"), "name": name,
             }
             added += 1
-        print(f"เพิ่มกองความเสี่ยง 1–2 อัตโนมัติ {added} กอง")
+        print(f"เพิ่มกองความเสี่ยง {sorted(MM_LEVELS)} อัตโนมัติ {added} กอง")
     for f in funds:
         if f["name"] in resolved:
             continue
@@ -221,6 +231,7 @@ def main():
 
     notes_path = DATA / "notes.json"
     notes = json.loads(notes_path.read_text()) if notes_path.exists() else {}
+    funds.sort(key=lambda f: (f["group"], f["name"]))
     out_funds = []
     for f in funds:
         info = resolved.get(f["name"])
@@ -254,7 +265,8 @@ def main():
             "risk": risk.get(info["proj_id"]),
             "warning": warn,
             "note": stitched,
-            "d": [d.isoformat() for d in days],
+            "s": days[0].isoformat() if days else None,
+            "dd": [(b - a).days for a, b in zip(days, days[1:])],
             "v": [round(series[d], 4) for d in days],
         })
 
@@ -269,9 +281,10 @@ def main():
         "missing": missing,
     }
     (OUT / "data.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    print(f"ขนาดไฟล์ {(OUT / 'data.json').stat().st_size / 1e6:.1f} MB")
     print(f"เขียน docs/compare/data.json ({len(out_funds)} กอง)")
 
-    if not any(x["d"] for x in out_funds):
+    if not any(x["s"] for x in out_funds):
         raise SystemExit("ดึง NAV ไม่ได้เลยสักกอง - ลองรันแบบ selftest เพื่อดู response")
 
 

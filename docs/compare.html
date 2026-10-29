@@ -38,7 +38,9 @@
   .side h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
   .side input[type=search] { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; }
   .grp { margin-top: 12px; }
-  .grp-name { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
+  .grp-name { font-size: 12.5px; font-weight: 600; color: var(--navy); margin-bottom: 4px; cursor: pointer; padding: 4px 2px; }
+  .grp-name span { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  #list { max-height: 60vh; overflow-y: auto; margin-right: -6px; padding-right: 6px; }
   .opt { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 14px; }
   .opt:hover { background: var(--bg); }
   .opt input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
@@ -307,6 +309,11 @@ async function onCSV(file) {
 }
 
 /* ---------- เลือกกอง */
+const openGroups = new Set(["จากไฟล์ CSV"]);
+document.addEventListener("toggle", (e) => {
+  const g = e.target.dataset?.g; if (g == null) return;
+  if (e.target.open) openGroups.add(g); else openGroups.delete(g);
+}, true);
 function renderList() {
   const q = $("q").value.trim().toLowerCase();
   const groups = new Map();
@@ -317,12 +324,12 @@ function renderList() {
     groups.get(f.group).push(f);
   }
   $("list").innerHTML = [...groups].map(([g, fs]) =>
-    `<div class="grp"><div class="grp-name">${esc(g)}</div>` + fs.map(f => {
+    `<details class="grp" data-g="${esc(g)}" ${q || openGroups.has(g) || fs.some(f => selected.includes(f.name)) ? "open" : ""}><summary class="grp-name">${esc(g)} <span>${fs.length}</span></summary>` + fs.map(f => {
       const on = selected.includes(f.name);
       return `<label class="opt" title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
         (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) + `<span class="nm">${esc(f.name)}</span>` +
         (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
-    }).join("") + `</div>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
+    }).join("") + `</details>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
   $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
 }
 $("list").addEventListener("change", (e) => {
@@ -677,6 +684,11 @@ function update() {
     const r = await fetch("compare/data.json?v=" + Date.now());
     if (!r.ok) throw new Error(r.status);
     DATA = await r.json();
+    for (const f of DATA.funds) if (!f.d) {
+      const d = [], t0 = f.s ? dnum(f.s) : 0;
+      if (f.s) { let t = t0; d.push(f.s); for (const k of f.dd || []) { t += k; d.push(isoOf(t)); } }
+      f.d = d; delete f.dd;
+    }
     $("asof").textContent = `ข้อมูลถึง ${thDate(DATA.updated)} · ย้อนหลัง ${DATA.years} ปี`;
   } catch (e) {
     $("asof").textContent = "ยังไม่มีข้อมูล";
