@@ -36,7 +36,21 @@
 
   /* เลือกกอง */
   .side h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
-  .side input[type=search] { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; }
+  .searchbox { position: relative; }
+  .searchbox svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .searchbox input { width: 100%; font: inherit; font-size: 16px; padding: 11px 38px 11px 40px; border: 1.5px solid var(--line); border-radius: 11px; background: #fff; -webkit-appearance: none; appearance: none; }
+  .searchbox input::-webkit-search-cancel-button { display: none; }
+  .searchbox input:focus { outline: none; border-color: var(--navy-2); box-shadow: 0 0 0 3px rgba(36,70,125,.15); }
+  .searchbox button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: var(--bg); color: var(--muted); width: 26px; height: 26px; border-radius: 50%; font-size: 17px; line-height: 1; cursor: pointer; }
+  .searchbox button:hover { color: var(--ink); }
+  .hint { color: var(--muted); font-size: 12px; margin: 6px 2px 0; }
+  .hint kbd { font: inherit; font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fff; }
+  .sec-title { font-size: 12.5px; font-weight: 600; color: var(--navy); margin: 14px 2px 4px; }
+  .sec-title span { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .opt .meta { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opt .nm mark { background: #fff3c4; color: inherit; border-radius: 2px; padding: 0 1px; }
+  .opt.active { background: #e8eef8; box-shadow: inset 2px 0 0 var(--navy); }
+  .pinned { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
   .grp { margin-top: 12px; }
   .grp-name { font-size: 12.5px; font-weight: 600; color: var(--navy); margin-bottom: 4px; cursor: pointer; padding: 4px 2px; }
   .grp-name span { color: var(--muted); font-weight: 400; margin-left: 4px; }
@@ -178,7 +192,12 @@
   <div class="layout">
     <aside class="card side">
       <h2>เลือกกองทุน</h2>
-      <input type="search" id="q" placeholder="ค้นหาชื่อกอง / บลจ.">
+      <div class="searchbox">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="search" id="q" placeholder="ค้นหา เช่น kcash, บัวหลวง" autocomplete="off" aria-label="ค้นหากองทุน">
+        <button id="qClear" type="button" title="ล้างคำค้น" hidden>×</button>
+      </div>
+      <div class="hint" id="qHint">กด <kbd>/</kbd> เพื่อค้นหา · ไม่ต้องพิมพ์ขีด</div>
       <div id="list"></div>
       <div class="count" id="count"></div>
       <div class="upload">
@@ -340,23 +359,66 @@ document.addEventListener("toggle", (e) => {
   const g = e.target.dataset?.g; if (g == null) return;
   if (e.target.open) openGroups.add(g); else openGroups.delete(g);
 }, true);
+// ค้นหาแบบไม่สนขีด ช่องว่าง จุด วงเล็บ และตัวพิมพ์เล็ก/ใหญ่
+const qnorm = (s) => String(s || "").toLowerCase().replace(/[\s\-._()\/,&]+/g, "");
+function hl(name, qn) {                         // ไฮไลต์ส่วนที่ตรงกับคำค้น บนชื่อเดิม (ข้ามขีด/ช่องว่าง)
+  if (!qn) return esc(name);
+  const map = []; let flat = "";
+  [...name].forEach((ch, i) => { const n = qnorm(ch); if (n) { flat += n; map.push(i); } });
+  const at = flat.indexOf(qn); if (at < 0) return esc(name);
+  const a = map[at], b = map[at + qn.length - 1] + 1, chars = [...name];
+  return esc(chars.slice(0, a).join("")) + "<mark>" + esc(chars.slice(a, b).join("")) + "</mark>" + esc(chars.slice(b).join(""));
+}
+function optItem(f, qn, idx) {
+  const on = selected.includes(f.name);
+  const meta = f.custom ? "อัปโหลดจากไฟล์ CSV" : [amcShort(f.sec?.comp_name_th || f.info?.comp_name_th), f.risk ? `ความเสี่ยง ${f.risk}` : ""].filter(Boolean).join(" · ");
+  return `<label class="opt" ${idx != null ? `data-i="${idx}"` : ""} title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
+    (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) +
+    `<span class="nm">${hl(f.name, qn)}${ipoTag(f)}<span class="meta">${esc(meta)}</span></span>` +
+    (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
+}
+let hits = [], activeIdx = -1;
+function searchScore(f, qn) {
+  const n = qnorm(f.name);
+  if (n.startsWith(qn)) return 4;
+  if (n.includes(qn)) return 3;
+  if (qnorm(f.info?.proj_abbr_name).includes(qn)) return 2;
+  const other = qnorm([f.sec?.proj_name_th, f.info?.proj_name_th, f.sec?.proj_name_en, f.sec?.comp_name_th, f.info?.comp_name_th, amcShort(f.sec?.comp_name_th || f.info?.comp_name_th)].join(" "));
+  return other.includes(qn) ? 1 : 0;
+}
 function renderList() {
-  const q = $("q").value.trim().toLowerCase();
-  const groups = new Map();
-  for (const f of allSeries()) {
-    const hay = (f.name + " " + (f.info?.proj_name_th || "") + " " + (f.info?.comp_name_th || "")).toLowerCase();
-    if (q && !hay.includes(q)) continue;
-    if (!groups.has(f.group)) groups.set(f.group, []);
-    groups.get(f.group).push(f);
+  const raw = $("q").value, qn = qnorm(raw);
+  $("qClear").hidden = !raw;
+  const sel = selected.map(byName).filter(Boolean);
+  let html = sel.length ? `<div class="pinned"><div class="sec-title">ที่เลือกอยู่ <span>${sel.length}</span></div>${sel.map(f => optItem(f, qn)).join("")}</div>` : "";
+  if (qn) {
+    hits = allSeries().map(f => [searchScore(f, qn), f]).filter(([sc]) => sc > 0)
+      .sort((a, b) => b[0] - a[0] || a[1].name.localeCompare(b[1].name)).map(([, f]) => f);
+    if (activeIdx >= hits.length) activeIdx = hits.length - 1;
+    html += `<div class="sec-title">พบ <span style="margin:0">${hits.length}</span> กอง</div>` +
+      (hits.length ? hits.map((f, i) => optItem(f, qn, i)).join("") : `<div class="count">ไม่พบกองที่ค้นหา</div>`);
+  } else {
+    hits = []; activeIdx = -1;
+    const groups = new Map();
+    for (const f of allSeries()) { if (!groups.has(f.group)) groups.set(f.group, []); groups.get(f.group).push(f); }
+    html += [...groups].map(([g, fs]) =>
+      `<details class="grp" data-g="${esc(g)}" ${openGroups.has(g) ? "open" : ""}><summary class="grp-name">${esc(g)} <span>${fs.length}</span></summary>` +
+      fs.map(f => optItem(f, "")).join("") + `</details>`).join("");
   }
-  $("list").innerHTML = [...groups].map(([g, fs]) =>
-    `<details class="grp" data-g="${esc(g)}" ${q || openGroups.has(g) || fs.some(f => selected.includes(f.name)) ? "open" : ""}><summary class="grp-name">${esc(g)} <span>${fs.length}</span></summary>` + fs.map(f => {
-      const on = selected.includes(f.name);
-      return `<label class="opt" title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
-        (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) + `<span class="nm">${esc(f.name)}${ipoTag(f)}</span>` +
-        (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
-    }).join("") + `</details>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
+  $("list").innerHTML = html;
+  markActive();
   $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (selected.length ? `<button class="reset" id="clearSel">ล้างที่เลือก</button>` : "") + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
+}
+function markActive() {
+  document.querySelectorAll("#list .opt.active").forEach(x => x.classList.remove("active"));
+  if (activeIdx < 0) return;
+  const el = document.querySelector(`#list .opt[data-i="${activeIdx}"]`);
+  if (el) { el.classList.add("active"); el.scrollIntoView({ block: "nearest" }); }
+}
+function toggleFund(n) {
+  if (selected.includes(n)) selected = selected.filter(x => x !== n);
+  else { if (selected.length >= MAX_SEL) { toast(`เลือกได้สูงสุด ${MAX_SEL} กอง`); return; } selected.push(n); }
+  renderList(); update();
 }
 $("list").addEventListener("change", (e) => {
   const n = e.target.dataset.n; if (!n) return;
@@ -374,7 +436,17 @@ $("list").addEventListener("click", (e) => {
   selected = selected.filter(x => x !== n);
   rebuildDates(); renderList(); update();
 });
-$("q").addEventListener("input", renderList);
+$("q").addEventListener("input", () => { activeIdx = qnorm($("q").value) ? 0 : -1; renderList(); });
+$("q").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" && hits.length) { e.preventDefault(); activeIdx = Math.min(hits.length - 1, activeIdx + 1); markActive(); }
+  else if (e.key === "ArrowUp" && hits.length) { e.preventDefault(); activeIdx = Math.max(0, activeIdx - 1); markActive(); }
+  else if (e.key === "Enter" && hits[activeIdx]) { e.preventDefault(); toggleFund(hits[activeIdx].name); }
+  else if (e.key === "Escape") { $("q").value = ""; activeIdx = -1; renderList(); }
+});
+$("qClear").onclick = () => { $("q").value = ""; activeIdx = -1; renderList(); $("q").focus(); };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") && !e.metaKey && !e.ctrlKey) { e.preventDefault(); $("q").focus(); $("q").select(); }
+});
 $("list").addEventListener("input", (e) => {
   const n = e.target.dataset.c; if (!n) return;
   COLORS[n] = e.target.value; saveColors(); renderChart(); renderTable(); saveHash();
@@ -468,9 +540,12 @@ function draw(ctx, opts = {}) {
 
   ctx.save();
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-  const L = 92, R = 140, T = title ? 70 : 30;
-  const legendRows = Math.ceil(ser.length / 5);
-  const B = 62 + 30 * Math.max(legendRows, 1);
+  // ป้ายท้ายเส้น = ชื่อกอง + ค่าล่าสุด (แทน legend) · เผื่อที่ทางขวาให้พอดีป้ายที่ยาวที่สุด
+  const tagText = (s) => `${s.name}  ${pct(s.pts.at(-1)[1], 2)}`;
+  ctx.font = `700 16px ${FONT}`;
+  const tagW = Math.max(0, ...ser.map(s => ctx.measureText(tagText(s)).width)) + 20;
+  const L = 92, R = Math.min(420, Math.max(140, tagW + 22)), T = title ? 70 : 30;
+  const B = 62;
   const pw = W - L - R, ph = H - T - B;
   if (title) { ctx.font = `600 26px ${FONT}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
   if (!ser.length) { ctx.restore(); layout = null; return; }
@@ -523,32 +598,19 @@ function draw(ctx, opts = {}) {
   }
   ctx.restore();
 
-  // ป้ายค่าล่าสุดทางขวา (กันซ้อนกัน)
-  ctx.font = `600 16px ${FONT}`;
-  const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]), v: s.pts.at(-1)[1] })).sort((a, b) => a.y - b.y);
-  const gap = 30;
+  // ป้ายชื่อกอง + ค่าล่าสุดท้ายเส้น (กันซ้อนกัน)
+  const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]) })).sort((a, b) => a.y - b.y);
+  const gap = 32;
   for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < gap) tags[i].y = tags[i - 1].y + gap;
   const over = tags.length ? tags.at(-1).y - (T + ph) : 0;
   if (over > 0) { tags.forEach(t => t.y -= over); for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < gap) tags[i].y = tags[i + 1].y - gap; }
   for (const t of tags) {
-    const txt = pct(t.v, 2), w = ctx.measureText(txt).width + 16, x = L + pw + 10;
-    ctx.fillStyle = t.s.color; roundRect(ctx, x, t.y - 13, w, 26, 6); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 8, t.y + 0.5);
+    ctx.font = `${t.s.hi ? 700 : 600} 16px ${FONT}`;
+    const txt = tagText(t.s), w = ctx.measureText(txt).width + 20, x = L + pw + 10;
+    ctx.fillStyle = t.s.color; roundRect(ctx, x, t.y - 14, w, 28, 7); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 10, t.y + 0.5);
   }
 
-  // คำอธิบายเส้น
-  ctx.font = `500 17px ${FONT}`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  // จัดเรียงต่อกันตามความยาวชื่อ ขึ้นบรรทัดใหม่เมื่อเต็ม แล้วจัดกึ่งกลาง
-  const items = ser.map(s => ({ s, w: 24 + 10 + ctx.measureText(s.name).width + 36 }));
-  const lines = [[]]; let lw = 0;
-  for (const it of items) { if (lw + it.w > W - 48 && lines.at(-1).length) { lines.push([]); lw = 0; } lines.at(-1).push(it); lw += it.w; }
-  lines.forEach((ln, r) => {
-    let x = W / 2 - (ln.reduce((m, it) => m + it.w, 0) - 36) / 2; const y = T + ph + 52 + r * 30;
-    for (const it of ln) {
-      ctx.fillStyle = it.s.color; roundRect(ctx, x, y - 7, 24, 14, 3); ctx.fill();
-      ctx.font = `${it.s.hi ? 700 : 500} 17px ${FONT}`; ctx.fillStyle = "#1f2937"; ctx.fillText(it.s.name, x + 34, y + 0.5); x += it.w;
-    }
-  });
   // ช่วงข้อมูล
   if (opts.stamp !== false) {
     ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
