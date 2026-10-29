@@ -36,6 +36,10 @@
 
   /* เลือกกอง */
   .side h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
+  .side-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .side-head h2 { margin: 0; }
+  .sel-tools { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .sel-tools .reset { margin-left: 8px; }
   .searchbox { position: relative; }
   .searchbox svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
   .searchbox input { width: 100%; font: inherit; font-size: 16px; padding: 11px 38px 11px 40px; border: 1.5px solid var(--line); border-radius: 11px; background: #fff; -webkit-appearance: none; appearance: none; }
@@ -196,13 +200,12 @@
 <main class="wrap">
   <div class="layout">
     <aside class="card side">
-      <h2>เลือกกองทุน</h2>
+      <div class="side-head"><h2>เลือกกองทุน</h2><div class="sel-tools" id="selTools"></div></div>
       <div class="searchbox">
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <input type="search" id="q" placeholder="ค้นหา เช่น kcash, บัวหลวง" autocomplete="off" aria-label="ค้นหากองทุน">
+        <input type="search" id="q" placeholder="ค้นหาชื่อกองทุน" autocomplete="off" aria-label="ค้นหากองทุน">
         <button id="qClear" type="button" title="ล้างคำค้น" hidden>×</button>
       </div>
-      <div class="hint" id="qHint">กด <kbd>/</kbd> เพื่อค้นหา · ไม่ต้องพิมพ์ขีด</div>
       <div id="list"></div>
       <div class="count" id="count"></div>
       <div class="upload">
@@ -376,10 +379,10 @@ function hl(name, qn) {                         // ไฮไลต์ส่ว�
 }
 function optItem(f, qn, idx) {
   const on = selected.includes(f.name);
-  const meta = f.custom ? "อัปโหลดจากไฟล์ CSV" : [amcShort(f.sec?.comp_name_th || f.info?.comp_name_th), f.risk ? `ความเสี่ยง ${f.risk}` : ""].filter(Boolean).join(" · ");
+  const meta = qn && !f.custom && f.risk ? `ความเสี่ยง ${f.risk}` : "";
   return `<label class="opt" ${idx != null ? `data-i="${idx}"` : ""} title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
     (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) +
-    `<span class="nm">${hl(f.name, qn)}${ipoTag(f)}<span class="meta">${esc(meta)}</span></span>` +
+    `<span class="nm">${hl(f.name, qn)}${ipoTag(f)}${meta ? `<span class="meta">${esc(meta)}</span>` : ""}</span>` +
     (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
 }
 let hits = [], activeIdx = -1;
@@ -412,7 +415,8 @@ function renderList() {
   }
   $("list").innerHTML = html;
   markActive();
-  $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (selected.length ? `<button class="reset" id="clearSel">ล้างที่เลือก</button>` : "") + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
+  $("selTools").innerHTML = `${selected.length} / ${MAX_SEL}` + (selected.length ? `<button class="reset" id="clearSel">ล้างที่เลือก</button>` : "");
+  $("count").innerHTML = Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "";
 }
 function markActive() {
   document.querySelectorAll("#list .opt.active").forEach(x => x.classList.remove("active"));
@@ -457,6 +461,7 @@ $("list").addEventListener("input", (e) => {
   COLORS[n] = e.target.value; saveColors(); renderChart(); renderTable(); saveHash();
 });
 $("list").addEventListener("change", (e) => { if (e.target.dataset.c) renderList(); });
+$("selTools").addEventListener("click", (e) => { if (e.target.id === "clearSel") { selected = []; renderList(); update(); } });
 $("count").addEventListener("click", (e) => {
   if (e.target.id === "resetColors") { COLORS = {}; saveColors(); renderList(); update(); }
   if (e.target.id === "clearSel") { selected = []; renderList(); update(); }
