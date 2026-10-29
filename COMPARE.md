@@ -123,7 +123,7 @@ AN/PN/IN/LN = Feeder ตามกองหลัก, IM = Inverse, LM = Leverage
 คอลัมน์ = กองที่ติ๊กเลือก + คอลัมน์ FIXEDSP ท้ายสุด หัวข้อตามสไลด์เทียบกอง มีปุ่ม **Copy ตาราง**
 ช่องที่ SEC ไม่มีข้อมูลเว้นว่างไว้ กรอกต่อใน PowerPoint ได้
 
-**คอลัมน์ FIXEDSP** ใช้ข้อความตามสไลด์ (ข้อมูล ณ ต.ค. 69) แก้ได้ที่ `FIXEDSP_INFO` และ `FIXEDSP_SOURCE` ใน `docs/compare.html`
+**คอลัมน์ FIXEDSP** ใช้ข้อความตามสไลด์ (ข้อมูล ณ ต.ค. 69) แก้ได้ที่ `FIXEDSP_INFO` ใน `docs/compare.html`
 (หาคำว่า `FIXEDSP_INFO` แล้วแก้ข้อความในเครื่องหมายคำพูดฝั่งขวา)
 
 | หัวข้อ | ค่าจาก SEC |

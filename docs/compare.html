@@ -167,7 +167,7 @@
   <div class="wrap">
     <div>
       <h1>เปรียบเทียบ FIXEDSP</h1>
-      <p>เทียบผลตอบแทน FIXEDSP กับกองตลาดเงิน · เลือกกอง เลื่อนช่วงเวลา แล้วกด Copy รูปไปวางใน PowerPoint</p>
+      <p>เทียบผลตอบแทน FIXEDSP กับกองทุนตราสารหนี้</p>
     </div>
     <div class="asof" id="asof">กำลังโหลด…</div>
   </div>
@@ -223,7 +223,6 @@
 
       <h3>เทียบกับ FIXEDSP <button class="btn ghost sm" id="copyT1">Copy ตาราง</button></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="t1" class="dt"></table></div>
-      <div class="src" id="src1"></div>
       <div class="notice" id="notice" hidden></div>
     </section>
   </div>
@@ -597,7 +596,7 @@ const SEC_ROWS = [
   ["วันจดทะเบียนกองทุน", ["regis_date"]],
 ];
 const stripHtml = (s) => String(s).replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-const amcShort = (s) => String(s || "").replace(/^บริษัทหลักทรัพย์จัดการกองทุน\s*/, "บลจ. ").replace(/\s*จำกัด(\s*\(มหาชน\))?$/, "");
+const amcShort = (s) => String(s || "").replace(/^บริษัท\s*หลักทรัพย์จัดการกองทุน(รวม)?\s*/, "บลจ. ").replace(/\s*จำกัด(\s*\(มหาชน\))?$/, "");
 function secVal(f, keys, fmt) {
   for (const k of keys) { const v = f.sec?.[k]; if (v != null && String(v).trim()) return /date/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v) ? thDate(v.slice(0, 10)) : fmt ? fmt(v) : v; }
   return null;
@@ -714,7 +713,6 @@ const FIXEDSP_INFO = {
   "ระยะเวลารับเงินค่าขายคืน": "T+2",
   "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล",
 };
-const FIXEDSP_SOURCE = "ข้อมูล FIXEDSP: BLS Top Funds ณ เดือน ต.ค. 69";
 const FIXEDSP_MAP = Object.fromEntries(Object.entries(FIXEDSP_INFO).map(([k, v]) => [keyOf(k), v]));
 const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyOf(label)] || "") : secCell(f, label);
 function modelT1() {
@@ -731,7 +729,6 @@ function renderTable() {
   renderInfos(); renderPerf();
   $("tblNote").textContent = selected.length ? `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}` : "";
   $("t1").innerHTML = tableHTML(modelT1());
-  $("src1").textContent = `ที่มา: SEC Open API (สำนักงาน ก.ล.ต.) · ${FIXEDSP_SOURCE}`;
 }
 async function copyModel(m) {
   const txt = (v) => v || "";
@@ -766,7 +763,7 @@ $("print").onclick = () => {
   $("rTitle").textContent = $("title").value.trim() || "เปรียบเทียบผลตอบแทน " + selected.join(" · ");
   $("rMeta").textContent = `ช่วงข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
   $("rImg").src = exportCanvas(2).toDataURL("image/png");
-  $("rTbl").innerHTML = `<table>${$("perf").innerHTML}</table><h3>เทียบกับ FIXEDSP</h3><table>${$("t1").innerHTML}</table><div class="foot">${esc($("src1").textContent)}</div>`;
+  $("rTbl").innerHTML = `<table>${$("perf").innerHTML}</table><h3>เทียบกับ FIXEDSP</h3><table>${$("t1").innerHTML}</table>`;
   const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
   setTimeout(() => { window.print(); document.title = old; }, 150);
 };
