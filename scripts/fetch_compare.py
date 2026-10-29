@@ -28,9 +28,33 @@ ROOT = fn.ROOT
 DATA = ROOT / "data" / "compare"
 OUT = ROOT / "docs" / "compare"
 YEARS = int(os.getenv("COMPARE_YEARS", "3"))
-# เพิ่มกองตลาดเงิน (ความเสี่ยงระดับ 1–2) ทุกกองให้อัตโนมัติ จากนโยบายการลงทุนใน SEC profiles
+# เพิ่มกองความเสี่ยงระดับ 1–2 (กองตลาดเงิน) ทุกกองให้อัตโนมัติ จาก /v2/fund/factsheet/risk-spectrum
 AUTO_MM = os.getenv("AUTO_MONEY_MARKET", "1") == "1"
-MM_GROUP = "ตลาดเงิน"
+MM_LEVELS = {1, 2}
+MM_GROUP = "ตลาดเงิน (ความเสี่ยง 1–2)"
+RISK_URL = f"{fn.BASE}/factsheet/risk-spectrum"
+
+
+def load_risk():
+    """proj_id -> ระดับความเสี่ยงล่าสุด (int) จาก factsheet ที่มีผลล่าสุด ดึงทีเดียวทุกกอง"""
+    out, cursor = {}, None
+    while True:
+        params = {"latest": "true", "page_size": "100"}
+        if cursor:
+            params["next_cursor"] = cursor
+        r = fn.get(RISK_URL, params)
+        if r.status_code != 200:
+            raise RuntimeError(f"risk-spectrum HTTP {r.status_code}: {r.text[:200]}")
+        rows, cursor = fn.extract_list(r.json())
+        for row in rows:
+            m = re.search(r"(\d)", str(row.get("risk_spectrum") or ""))
+            pid = row.get("proj_id")
+            if m and pid:
+                out[pid] = int(m.group(1))
+        if not rows or not cursor:
+            break
+    print(f"  risk-spectrum ได้ {len(out)} กอง")
+    return out
 
 
 def is_money_market(p: dict) -> bool:
@@ -142,11 +166,22 @@ def main():
     start = today - timedelta(days=round(365.25 * YEARS) + 7)
 
     resolved, missing = {}, {}
+    try:
+        risk = load_risk()
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! ดึงระดับความเสี่ยงไม่ได้: {e} (ใช้นโยบายการลงทุนแทน)")
+        risk = {}
+
+    def low_risk(p):
+        if risk:
+            return risk.get(p.get("proj_id")) in MM_LEVELS
+        return is_money_market(p)
+
     if AUTO_MM:
         listed = {fn.norm(f["name"]) for f in funds}
         added = 0
         for p in profiles:
-            if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not is_money_market(p):
+            if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not low_risk(p):
                 continue
             cls = str(p.get("fund_class_name") or "").strip()
             cls = "" if cls.lower() in ("main", "none", "nan") else cls
@@ -161,7 +196,7 @@ def main():
                 "comp_name_th": p.get("comp_name_th"), "name": name,
             }
             added += 1
-        print(f"เพิ่มกองตลาดเงินอัตโนมัติ {added} กอง")
+        print(f"เพิ่มกองความเสี่ยง 1–2 อัตโนมัติ {added} กอง")
     for f in funds:
         if f["name"] in resolved:
             continue
@@ -216,6 +251,7 @@ def main():
             "group": f["group"],
             "info": info,
             "sec": scalar_fields(raw_profile(info)),
+            "risk": risk.get(info["proj_id"]),
             "warning": warn,
             "note": stitched,
             "d": [d.isoformat() for d in days],

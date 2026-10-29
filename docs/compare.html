@@ -563,6 +563,7 @@ function tableModel() {
     ["ชื่อกองทุน", fs.map(f => f.info?.proj_name_th || "")],
     ["บลจ.", fs.map(f => amcShort(f.info?.comp_name_th) || "")],
   ];
+  if (fs.some(f => f.risk)) rows.push(["ระดับความเสี่ยง", fs.map(f => f.risk ? String(f.risk) : "")]);
   for (const [label, keys, fmt] of SEC_ROWS) { const vals = fs.map(f => secVal(f, keys, fmt)); if (vals.some(v => v)) rows.push([label, vals.map(v => v || "")]); }
   rows.push(
     ["NAV ล่าสุด", fs.map(f => f.custom ? "" : f.v.length ? `${f.v.at(-1).toFixed(4)} (${thDate(f.d.at(-1))})` : "")],
