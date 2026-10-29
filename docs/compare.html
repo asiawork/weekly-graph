@@ -254,7 +254,7 @@
     </section>
   </div>
 
-  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · แก้รายชื่อกองได้ที่ไฟล์ compare_funds.csv ใน repo · เส้นจากไฟล์ CSV เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น</footer>
+  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · ข้อมูล FIXEDSP ที่อัปโหลดเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น</footer>
 </main>
 
 <div id="report">
@@ -893,14 +893,14 @@ function update() {
       if (f.s) { let t = t0; d.push(f.s); for (const k of f.dd || []) { t += k; d.push(isoOf(t)); } }
       f.d = d; delete f.dd;
     }
-    $("asof").textContent = `ข้อมูลถึง ${thDate(DATA.updated)} · ย้อนหลัง ${DATA.years} ปี`;
+    $("asof").textContent = `NAV ถึง ${thDate(DATA.nav_to || DATA.updated)} · ย้อนหลัง ${DATA.years} ปี`;
   } catch (e) {
     $("asof").textContent = "ยังไม่มีข้อมูล";
     $("notice").hidden = false;
     $("notice").innerHTML = "ยังไม่มีไฟล์ข้อมูล — ไปที่ GitHub → Actions → <b>Compare data</b> → Run workflow ครั้งแรก (ระหว่างนี้อัปโหลด CSV เพื่อลองได้)";
   }
   loadHash();
-  if (!selected.length) selected = allSeries().slice(0, 2).map(f => f.name);
+  if (!selected.length && CUSTOM.length) selected = [CUSTOM[0].name];
   rebuildDates(); renderList(); update();
   if (document.fonts) document.fonts.ready.then(renderChart);
 })();

@@ -2,7 +2,8 @@
 ดึง NAV ย้อนหลัง 3 ปี + ข้อมูลเบื้องต้นจาก SEC Open API (v2) สำหรับหน้าเปรียบเทียบ (docs/compare.html)
 แยกจากกราฟ Top Funds Weekly ทั้งหมด: ไม่แตะ funds.csv, data/nav หรือ docs/data.json
 
-อ่าน  : compare_funds.csv                 รายชื่อกองที่เลือกเทียบได้
+อ่าน  : SEC profiles + risk-spectrum (เลือกกองความเสี่ยง 1–4 ให้อัตโนมัติ)
+        compare_funds.csv                 กองที่อยากเพิ่มเอง (ไม่บังคับ)
 เขียน : data/compare/nav/<กอง>.csv          NAV สะสม (ดึงเพิ่มเฉพาะวันใหม่)
         docs/compare/data.json            ข้อมูลที่หน้าเว็บใช้
 
@@ -18,7 +19,7 @@ import json
 import os
 import re
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -72,7 +73,6 @@ def is_money_market(p: dict) -> bool:
 fn.NAV_DIR = DATA / "nav"
 
 
-PORT_FILE = ROOT / "docs" / "fixedsp" / "port.csv"   # กองในพอร์ต FIXEDSP (หน้าเว็บอ่านไฟล์เดียวกัน)
 STATS_URL = f"{fn.BASE}/factsheet/statistics"
 FEES_URL = f"{fn.BASE}/factsheet/fees"
 REDEMP_URL = f"{fn.BASE}/factsheet/subscription-redemption-periods"
@@ -180,13 +180,6 @@ def _call_nav_capture(proj_id, start, end):
 
 
 fn.call_nav = _call_nav_capture
-
-
-def read_port():
-    if not PORT_FILE.exists():
-        return []
-    with PORT_FILE.open(encoding="utf-8-sig") as f:
-        return [(r.get("fund") or "").strip() for r in csv.DictReader(f) if (r.get("fund") or "").strip()]
 
 
 TAX_NAME = re.compile(r"(RMF|SSF|LTF|TESG|THAIESG|SESG|ESGX)", re.I)
@@ -315,11 +308,6 @@ def main():
     selftest = "--selftest" in sys.argv
 
     funds = read_list()
-    listed0 = {fn.norm(f["name"]) for f in funds}
-    for n in read_port():
-        if fn.norm(n) not in listed0:
-            funds.append({"name": n, "group": "พอร์ต FIXEDSP", "port": True})
-            listed0.add(fn.norm(n))
     profiles = fn.load_profiles()
     by_class, by_abbr = fn.build_lookup(profiles)
 
@@ -336,7 +324,7 @@ def main():
                 return r
         return rows[0] if rows else {}
 
-    today = date.today()
+    today = datetime.now(timezone(timedelta(hours=7))).date()   # เวลาไทย
     start = today - timedelta(days=round(365.25 * YEARS) + 7)
 
     resolved, missing = {}, {}
@@ -412,9 +400,6 @@ def main():
                 break
         return
 
-    for f in funds:
-        if f.get("port") and f["name"] in resolved:
-            f["group"] = LEVEL_GROUP.get(risk.get(resolved[f["name"]]["proj_id"]), f["group"])
     extras = load_extras()
     notes_path = DATA / "notes.json"
     notes = json.loads(notes_path.read_text()) if notes_path.exists() else {}
@@ -433,11 +418,13 @@ def main():
             print(f"  ! {e}")
         cache = fn.NAV_DIR / f"{fn.slug(info['name'])}.csv"
         series = fn.read_cache(cache)
-        series, stitched = stitch_old_class(info, start, series)
-        if stitched:
-            fn.write_cache(cache, series)   # รอบหน้าดึงเฉพาะวันใหม่
+        if info["name"] in notes:                # เคยลองแล้ว (สำเร็จ = ข้อความ, ไม่มีให้ต่อ = null)
+            stitched = notes[info["name"]]
+        else:
+            series, stitched = stitch_old_class(info, start, series)
+            if stitched:
+                fn.write_cache(cache, series)   # รอบหน้าดึงเฉพาะวันใหม่
             notes[info["name"]] = stitched
-        stitched = stitched or notes.get(info["name"])
         series = {d: v for d, v in series.items() if d >= start}
         days = sorted(series)
         # กอง/class ที่เพิ่งเปิด: ช่วงก่อนเปิดไม่มี NAV ของ class นี้ ไม่นับเป็นปัญหาถ้าได้ข้อมูลมาแล้ว
@@ -465,15 +452,20 @@ def main():
     DATA.mkdir(parents=True, exist_ok=True)
     keep_files = {f"{fn.slug(x['info']['name'])}.csv" for x in out_funds}
     removed = 0
-    for old in fn.NAV_DIR.glob("*.csv"):
-        if old.name not in keep_files:
-            old.unlink(); removed += 1
+    if risk and len(out_funds) >= 20:
+        for old in fn.NAV_DIR.glob("*.csv"):
+            if old.name not in keep_files:
+                old.unlink(); removed += 1
+    else:
+        print("  ! รายชื่อกองไม่ครบ (ดึงระดับความเสี่ยงไม่ได้) ข้ามการลบ NAV เก่า")
     notes = {k: v for k, v in notes.items() if any(x["name"] == k for x in out_funds)}
     print(f"ลบ NAV ของกองที่ไม่ใช้แล้ว {removed} ไฟล์")
     notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
     OUT.mkdir(parents=True, exist_ok=True)
+    last_days = [date.fromisoformat(x["s"]) + timedelta(days=sum(x["dd"])) for x in out_funds if x["s"]]
     payload = {
         "updated": today.isoformat(),
+        "nav_to": max(last_days).isoformat() if last_days else None,
         "run_at": datetime.utcnow().isoformat() + "Z",
         "years": YEARS,
         "funds": out_funds,
