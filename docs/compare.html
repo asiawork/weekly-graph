@@ -113,6 +113,9 @@
   tr.perf th, tr.perf td { border-top: 3px solid var(--line); }
   td.num { white-space: nowrap; }
   .pos { color: var(--pos); } .neg { color: var(--neg); }
+  .src { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
+  .dt tbody td { min-width: 150px; }
+  .dt thead th { text-align: center; }
   .infos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
   .info { background: var(--card); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 14px 16px; border-top: 4px solid var(--c, var(--navy)); }
   .info h4 { margin: 0; font-size: 17px; color: var(--navy); }
@@ -218,8 +221,9 @@
       <h3>ผลตอบแทน <small id="tblNote"></small></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="perf" class="perf-t"></table></div>
 
-      <h3>ตารางรายละเอียด <button class="btn ghost sm" id="copyTable">Copy ตาราง</button></h3>
-      <div class="tbl-wrap card" style="padding:0"><table id="tbl"></table></div>
+      <h3>เทียบกับ FIXEDSP <button class="btn ghost sm" id="copyT1">Copy ตาราง</button></h3>
+      <div class="tbl-wrap card" style="padding:0"><table id="t1" class="dt"></table></div>
+      <div class="src" id="src1"></div>
       <div class="notice" id="notice" hidden></div>
     </section>
   </div>
@@ -353,7 +357,7 @@ function renderList() {
         (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) + `<span class="nm">${esc(f.name)}${ipoTag(f)}</span>` +
         (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
     }).join("") + `</details>`).join("") || `<div class="count">ไม่พบกองที่ค้นหา</div>`;
-  $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
+  $("count").innerHTML = `เลือกแล้ว ${selected.length} / ${MAX_SEL} กอง` + (selected.length ? `<button class="reset" id="clearSel">ล้างที่เลือก</button>` : "") + (Object.keys(COLORS).length ? `<button class="reset" id="resetColors">ใช้สีเริ่มต้น</button>` : "");
 }
 $("list").addEventListener("change", (e) => {
   const n = e.target.dataset.n; if (!n) return;
@@ -377,7 +381,10 @@ $("list").addEventListener("input", (e) => {
   COLORS[n] = e.target.value; saveColors(); renderChart(); renderTable(); saveHash();
 });
 $("list").addEventListener("change", (e) => { if (e.target.dataset.c) renderList(); });
-$("count").addEventListener("click", (e) => { if (e.target.id === "resetColors") { COLORS = {}; saveColors(); renderList(); update(); } });
+$("count").addEventListener("click", (e) => {
+  if (e.target.id === "resetColors") { COLORS = {}; saveColors(); renderList(); update(); }
+  if (e.target.id === "clearSel") { selected = []; renderList(); update(); }
+});
 $("align").onchange = update;
 $("csvBtn").onclick = () => $("csvFile").click();
 $("csvFile").onchange = (e) => { if (e.target.files[0]) onCSV(e.target.files[0]); e.target.value = ""; };
@@ -636,55 +643,92 @@ function renderPerf() {
         `</tr>` + (f.note ? `<tr><td colspan="4"><small>${esc(f.name)}: ${esc(f.note)}</small></td></tr>` : "");
     }).join("") + `</tbody>`;
 }
-function tableModel() {
-  const fs = selected.map(byName).filter(Boolean);
-  const st = fs.map(f => stats(slice(f)));
-  const blank = () => fs.map(() => "");
-  // หัวข้อตามตารางรายละเอียดกองในสไลด์ FIXEDSP · ช่องที่ยังไม่มีข้อมูลเว้นว่างไว้กรอกเอง
-  const rows = [
-    ["บลจ.", fs.map(f => amcShort(f.sec?.comp_name_th || f.info?.comp_name_th) || "")],
-    ["นโยบายค่าเงิน", fs.map(fxText)],
-    ["ความเสี่ยง", fs.map(f => f.risk ? String(f.risk) : "")],
-    ["สัดส่วนการลงทุน\nทั้งในและต่างประเทศ", blank()],
-    ["สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน", blank()],
-    ["อายุเฉลี่ยของตราสาร", blank()],
-    ["Yield to Maturity", blank()],
-    ["อัตราผลตอบแทนที่คาดหวัง 1 ปี", blank()],
-    ["Average Credit Rating", blank()],
-    ["Credit Rating ต่ำสุด\nที่กองทุนลงทุนในปัจจุบัน", blank()],
-    ["ระยะเวลาที่ควรถือลงทุน", blank()],
-    ["ค่าธรรมเนียมขาย\n(Front-End Fee)", blank()],
-    ["ค่าธรรมเนียมการจัดการ\n+ อื่น ๆ", blank()],
-    ["ระยะเวลารับเงินค่าขายคืน", blank()],
-    ["วันที่จดทะเบียนกองทุน", fs.map(f => secVal(f, ["regis_date"]) || "")],
-    ["ขนาดกองทุน (ล้านบาท)", blank()],
-  ];
-  return { fs, rows, perfFrom: -1 };
+/* ---------- ตารางเทียบกองที่เลือกกับ FIXEDSP ----------
+   ช่องที่ SEC ไม่มีข้อมูลเว้นว่างไว้ */
+
+const keyOf = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
+const ROWS_T1 = ["บลจ.", "นโยบายค่าเงิน", "สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน", "อายุเฉลี่ยของตราสาร", "อัตราผลตอบแทนที่คาดหวัง 1 ปี",
+  "Average Credit Rating", "ระยะเวลาที่ควรถือลงทุน", "ค่าธรรมเนียมขาย (Front-End Fee)", "ค่าธรรมเนียมการจัดการ + อื่น ๆ",
+  "ระยะเวลารับเงินค่าขายคืน", "ทีมผู้เชี่ยวชาญดูแล"];
+const COUNTRY = { "1": "เน้นลงทุนต่างประเทศ", "2": "ลงทุนในต่างประเทศบางส่วน", "3": "ลงทุนในประเทศเท่านั้น", "4": "ลงทุนได้ทั้งในและต่างประเทศ" };
+const numPct = (v) => { if (v == null || v === "") return ""; const s = String(v).trim(); return /^-?\d+(\.\d+)?$/.test(s) ? `${(+s).toFixed(2)}%` : s; };
+function durText(v) {
+  if (v == null || v === "") return "";
+  const s = String(v).trim();
+  if (!/^\d+(\.\d+)?$/.test(s)) return s;          // ถ้า SEC ส่งมาเป็นข้อความอยู่แล้ว ใช้ตามนั้น
+  const months = +s * 12, m = Math.floor(months), d = Math.round((months - m) * 30.4);
+  return m ? `${m} เดือน${d ? ` ${d} วัน` : ""}` : `${d} วัน`;   // SEC รายงานเป็นปี
+}
+function feeOf(f, test) {
+  const fees = f?.x?.fees || {};
+  const k = Object.keys(fees).find(test); if (!k) return "";
+  const e = fees[k], a = e.actual ?? e.rate;
+  if (a == null || a === "") return e.other || "";
+  const s = String(a).trim();
+  return /^0+(\.0+)?$/.test(s) ? "ปัจจุบันไม่เรียกเก็บ" : numPct(s);
+}
+function redempOf(f) {
+  const rs = f?.x?.redemp || []; if (!rs.length) return "";
+  const r = rs.find(x => /redemp|ขายคืน|รับซื้อคืน|^R$/i.test(String(x.type || ""))) || rs[0];
+  const s = String(r.settlement_period ?? "").trim();
+  return /^\d+$/.test(s) ? `T+${s}` : (s || r.redemp_period_oth || "");
+}
+function fxShort(f) {
+  const v = String(f?.sec?.exchange_rate_protection_policy || "");
+  if (/^ทั้งหมด|fully/i.test(v)) return "ป้องกันทั้งหมด/เกือบทั้งหมด";
+  if (/บางส่วน|partial/i.test(v)) return "ป้องกันบางส่วน";
+  if (/ดุลยพินิจ|discret/i.test(v)) return "ขึ้นอยู่กับดุลยพินิจของผู้จัดการกองทุน";
+  if (/ไม่ป้องกัน|^ไม่/.test(v)) return "ไม่ป้องกัน";
+  if (!v && String(f?.sec?.invest_country_flag) === "3") return "ไม่มีความเสี่ยงค่าเงิน";
+  return v;
+}
+// ค่าจาก SEC ตามหัวข้อ
+function secCell(f, label) {
+  if (!f || f.custom) return "";
+  switch (keyOf(label)) {
+    case keyOf("บลจ."): return amcShort(f.sec?.comp_name_th || f.info?.comp_name_th);
+    case keyOf("นโยบายค่าเงิน"): return fxShort(f);
+    case keyOf("ความเสี่ยง"): return f.risk ? String(f.risk) : "";
+    case keyOf("สัดส่วนการลงทุนทั้งในและต่างประเทศ"): return COUNTRY[String(f.sec?.invest_country_flag || "")] || "";
+    case keyOf("อายุเฉลี่ยของตราสาร"): return durText(f.x?.duration);
+    case keyOf("Yield to Maturity"): return numPct(f.x?.ytm);
+    case keyOf("ค่าธรรมเนียมขาย (Front-End Fee)"): return feeOf(f, k => /ขาย|front/i.test(k) && !/ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch/i.test(k));
+    case keyOf("ค่าธรรมเนียมการจัดการ + อื่น ๆ"): return feeOf(f, k => /รวม|total/i.test(k) && /ค่าใช้จ่าย|ค่าธรรมเนียม|expense/i.test(k)) || feeOf(f, k => /การจัดการ|management/i.test(k));
+    case keyOf("ระยะเวลารับเงินค่าขายคืน"): return redempOf(f);
+    case keyOf("วันที่จดทะเบียนกองทุน"): return secVal(f, ["regis_date"]) || "";
+    case keyOf("ขนาดกองทุน (ล้านบาท)"): return f.x?.aum ? Math.round(f.x.aum[1] / 1e6).toLocaleString("en-US") : "";
+  }
+  return "";
+}
+const cellFor = (name, f, label) => secCell(f, label);
+function modelT1() {
+  const others = selected.map(byName).filter(f => f && !isHero(f));
+  const cols = [...others.map(f => ({ name: f.name, f })), { name: "FIXEDSP", f: null }];
+  return { cols, rows: ROWS_T1.map(l => [l, cols.map(c => cellFor(c.name, c.f, l))]) };
+}
+function tableHTML({ cols, rows }) {
+  const lab = (l) => esc(l).replace(/\n/g, "<br>");
+  return `<thead><tr><th>กองทุน</th>${cols.map(c => `<th>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
+    `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
 }
 function renderTable() {
-  const { fs, rows, perfFrom } = tableModel();
   renderInfos(); renderPerf();
-  if (!fs.length) { $("tbl").innerHTML = ""; $("tblNote").textContent = ""; return; }
-  $("tblNote").textContent = `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}`;
-  const cell = (v) => typeof v === "object" ? `<td class="num ${v.c}">${esc(v.t)}</td>` : `<td>${esc(v)}</td>`;
-  const lab = (l) => esc(l).replace(/\n/g, "<br>");
-  $("tbl").innerHTML = `<thead><tr><th>กองทุน</th>${fs.map(f => `<th><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}${ipoTag(f)}</th>`).join("")}</tr></thead>` +
-    `<tbody>${rows.map(([l, vs], i) => `<tr${i === perfFrom ? ' class="perf"' : ""}><th>${lab(l)}</th>${vs.map(cell).join("")}</tr>`).join("")}</tbody>`;
+  $("tblNote").textContent = selected.length ? `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}` : "";
+  $("t1").innerHTML = tableHTML(modelT1());
+  $("src1").textContent = "ที่มา: SEC Open API (สำนักงาน ก.ล.ต.)";
 }
-async function copyTable() {
-  const { fs, rows } = tableModel(); if (!fs.length) return;
-  const txt = (v) => typeof v === "object" ? v.t : (v || "");
-  const tsv = [["กองทุน", ...fs.map(f => f.name)].join("\t"), ...rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
+async function copyModel(m) {
+  const txt = (v) => v || "";
+  const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
   const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:Tahoma,sans-serif;font-size:11pt;text-align:center;";
   const hd = td + "background:#1b3560;color:#fff;font-weight:bold;";
-  const html = `<table style="border-collapse:collapse"><tr><th style="${hd}">กองทุน</th>${fs.map(f => `<th style="${hd}">${esc(f.name)}</th>`).join("")}</tr>` +
-    rows.map(([l, vs]) => `<tr><td style="${hd}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
+  const html = `<table style="border-collapse:collapse"><tr><th style="${hd}">กองทุน</th>${m.cols.map(c => `<th style="${td}font-weight:bold">${esc(c.name)}</th>`).join("")}</tr>` +
+    m.rows.map(([l, vs]) => `<tr><td style="${hd}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
   } catch (e) { await navigator.clipboard.writeText(tsv); }
   toast("Copy ตารางแล้ว วางใน PowerPoint / Excel ได้เลย");
 }
-
 /* ---------- ปุ่ม */
 function fileName(ext) { return (($("title").value.trim() || selected.join("_")) || "compare").replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80) + `_${range.s}_${range.e}.${ext}`; }
 $("copy").onclick = async () => {
@@ -706,11 +750,11 @@ $("print").onclick = () => {
   $("rTitle").textContent = $("title").value.trim() || "เปรียบเทียบผลตอบแทน " + selected.join(" · ");
   $("rMeta").textContent = `ช่วงข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
   $("rImg").src = exportCanvas(2).toDataURL("image/png");
-  $("rTbl").innerHTML = `<table>${$("perf").innerHTML}</table><table>${$("tbl").innerHTML}</table>`;
+  $("rTbl").innerHTML = `<table>${$("perf").innerHTML}</table><h3>เทียบกับ FIXEDSP</h3><table>${$("t1").innerHTML}</table><div class="foot">${esc($("src1").textContent)}</div>`;
   const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
   setTimeout(() => { window.print(); document.title = old; }, 150);
 };
-$("copyTable").onclick = copyTable;
+$("copyT1").onclick = () => copyModel(modelT1());
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
 
 /* ---------- state ใน URL */
@@ -739,7 +783,7 @@ function update() {
   syncRangeUI();
   const any = selected.some(n => byName(n));
   $("chartBox").hidden = !any; $("empty").hidden = any;
-  ["copy", "download", "print", "copyTable"].forEach(id => $(id).disabled = !any);
+  ["copy", "download", "print"].forEach(id => $(id).disabled = !any);
   const si = startInfo();
   $("alignNote").hidden = !(any && si.late);
   if (si.late) $("alignNote").textContent = `เริ่มนับ ${thDate(si.s)} เพราะ ${si.late.name} มีข้อมูลตั้งแต่วันนั้น (เอาติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" ออกถ้าอยากเห็นช่วงก่อนหน้าของกองอื่น)`;

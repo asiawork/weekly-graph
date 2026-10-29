@@ -72,6 +72,126 @@ def is_money_market(p: dict) -> bool:
 fn.NAV_DIR = DATA / "nav"
 
 
+PORT_FILE = ROOT / "docs" / "fixedsp" / "port.csv"   # กองในพอร์ต FIXEDSP (หน้าเว็บอ่านไฟล์เดียวกัน)
+STATS_URL = f"{fn.BASE}/factsheet/statistics"
+FEES_URL = f"{fn.BASE}/factsheet/fees"
+REDEMP_URL = f"{fn.BASE}/factsheet/subscription-redemption-period"
+
+
+def ckey(pid, cls) -> str:
+    c = str(cls or "").strip()
+    return f"{pid}|{'' if c.lower() in ('', 'main', 'none', 'nan') else fn.norm(c)}"
+
+
+def load_latest(url, label):
+    """ดึงข้อมูล factsheet ล่าสุดทุกกองแบบเป็นหน้า ๆ (ดึงทีเดียวทั้งตลาด)"""
+    rows, cursor = [], None
+    while True:
+        params = {"latest": "true", "page_size": "100"}
+        if cursor:
+            params["next_cursor"] = cursor
+        r = fn.get(url, params)
+        if r.status_code != 200:
+            raise RuntimeError(f"{label} HTTP {r.status_code}: {r.text[:200]}")
+        got, cursor = fn.extract_list(r.json())
+        rows.extend(got)
+        if not got or not cursor:
+            break
+    print(f"  {label} ได้ {len(rows)} แถว")
+    return rows
+
+
+def load_extras():
+    """(proj_id|class) -> ข้อมูลเสริมสำหรับตารางรายละเอียด"""
+    ex = {}
+
+    def put(row, k, v):
+        key = ckey(row.get("proj_id"), row.get("fund_class_name"))
+        ex.setdefault(key, {})[k] = v
+
+    jobs = [
+        ("statistics", STATS_URL, lambda row: (
+            put(row, "duration", row.get("portfolio_duration_period")),
+            put(row, "ytm", row.get("yield_to_maturity")))),
+        ("fees", FEES_URL, lambda row: ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {})
+            .setdefault("fees", {}).__setitem__(
+                str(row.get("fee_type_desc") or "").strip(),
+                {"rate": row.get("rate"), "actual": row.get("actual_value"), "other": row.get("fee_other_desc")})),
+        ("redemption", REDEMP_URL, lambda row: ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {})
+            .setdefault("redemp", []).append(
+                {k: row.get(k) for k in ("type", "period", "redemp_period_oth", "settlement_period") if row.get(k) not in (None, "")})),
+    ]
+    for label, url, fn_row in jobs:
+        try:
+            for row in load_latest(url, label):
+                fn_row(row)
+        except Exception as e:  # noqa: BLE001
+            print(f"  ! ดึง {label} ไม่ได้: {e}")
+    return ex
+
+
+# เก็บมูลค่าทรัพย์สินสุทธิ (net_asset) ล่าสุดจาก response NAV ที่ดึงอยู่แล้ว ไม่ต้องเรียก API เพิ่ม
+AUM = {}
+_orig_call_nav = fn.call_nav
+
+
+def _call_nav_capture(proj_id, start, end):
+    rows = _orig_call_nav(proj_id, start, end)
+    for row in rows:
+        na, d = row.get("net_asset"), str(row.get("nav_date") or "")[:10]
+        if na in (None, "") or not d:
+            continue
+        key = ckey(proj_id, row.get("fund_class_name"))
+        if key not in AUM or d >= AUM[key][0]:
+            try:
+                AUM[key] = (d, float(na))
+            except (TypeError, ValueError):
+                pass
+    return rows
+
+
+fn.call_nav = _call_nav_capture
+
+
+def read_port():
+    if not PORT_FILE.exists():
+        return []
+    with PORT_FILE.open(encoding="utf-8-sig") as f:
+        return [(r.get("fund") or "").strip() for r in csv.DictReader(f) if (r.get("fund") or "").strip()]
+
+
+TAX_NAME = re.compile(r"(RMF|SSF|LTF|TESG|THAIESG|SESG|ESGX)", re.I)
+TAX_TH = re.compile(r"เพื่อการเลี้ยงชีพ|เพื่อการออม|หุ้นระยะยาว|ไทยเพื่อความยั่งยืน")
+
+
+def is_tax_fund(p: dict) -> bool:
+    """กองลดหย่อนภาษี (RMF / SSF / LTF / ThaiESG) ดูจากชื่อย่อ ชื่อ class และชื่อไทย"""
+    names = " ".join(str(p.get(k) or "") for k in ("proj_abbr_name", "fund_class_name", "proj_name_en"))
+    th = " ".join(str(p.get(k) or "") for k in ("proj_name_th", "fund_class_detail"))
+    return bool(TAX_NAME.search(names) or TAX_TH.search(th))
+
+
+# class ที่ไม่ใช่ class หลัก (ดูจากชื่อชนิดหน่วยลงทุน)
+NOT_MAIN = re.compile(r"ปันผล|ขายคืนอัตโนมัติ|อิเล็กทรอนิกส์|ออนไลน์|สถาบัน|นิติบุคคล|ผู้มีเงินลงทุนสูง|พิเศษ|กองทุนสำรองเลี้ยงชีพ"
+                      r"|เพื่อการออม|เลี้ยงชีพ|ช่องทาง|ไม่ใช่รายย่อย")
+
+
+def class_score(p: dict):
+    """คะแนนว่า class นี้เป็น class หลักแค่ไหน (สูง = หลัก) None = ไม่เอา"""
+    cls = str(p.get("fund_class_name") or "").strip()
+    if cls.lower() in ("", "main", "none", "nan"):
+        return 10                                    # กองที่ไม่มีหลาย class
+    detail = str(p.get("fund_class_detail") or "")
+    sc = 0
+    if NOT_MAIN.search(detail):
+        sc -= 5
+    if re.search(r"สะสมมูลค่า|ทั่วไป", detail):
+        sc += 3
+    if re.search(r"-A$|A$", cls.upper()) and not re.search(r"-(AR|AD|AI)$", cls.upper()):
+        sc += 2
+    return sc
+
+
 def read_list():
     with (ROOT / "compare_funds.csv").open(encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
@@ -84,7 +204,7 @@ def read_list():
     return out
 
 
-SEC_KEEP = ["fund_status", "comp_name_th", "proj_name_th", "proj_name_en", "regis_date",
+SEC_KEEP = ["fund_status", "comp_name_th", "proj_name_th", "proj_name_en", "regis_date", "invest_country_flag",
             "investment_policy_desc", "management_style", "exchange_rate_protection_policy"]
 
 
@@ -162,6 +282,11 @@ def main():
     selftest = "--selftest" in sys.argv
 
     funds = read_list()
+    listed0 = {fn.norm(f["name"]) for f in funds}
+    for n in read_port():
+        if fn.norm(n) not in listed0:
+            funds.append({"name": n, "group": "พอร์ต FIXEDSP", "port": True})
+            listed0.add(fn.norm(n))
     profiles = fn.load_profiles()
     by_class, by_abbr = fn.build_lookup(profiles)
 
@@ -195,28 +320,39 @@ def main():
 
     if AUTO_MM:
         listed = {fn.norm(f["name"]) for f in funds}
-        added = 0
+        # เลือก class หลักกองละ 1 class และตัดกองลดหย่อนภาษี
+        best = {}
         for p in profiles:
             if str(p.get("proj_retail_type") or "R").strip().upper() != "R" or not low_risk(p):
                 continue
             # ตัดกองปิดที่มีอายุโครงการ (term fund) เทียบกับพอร์ตเปิดไม่ได้
             if str(p.get("proj_term_flag") or "N").strip().upper() not in ("N", ""):
                 continue
+            if is_tax_fund(p):
+                continue
+            sc = class_score(p)
+            if sc is None:
+                continue
+            pid = p.get("proj_id")
+            if pid not in best or sc > best[pid][0]:
+                best[pid] = (sc, p)
+        added = 0
+        for pid, (_, p) in best.items():
             cls = str(p.get("fund_class_name") or "").strip()
             cls = "" if cls.lower() in ("main", "none", "nan") else cls
             name = cls or str(p.get("proj_abbr_name") or "").strip()
             if not name or fn.norm(name) in listed:
                 continue
             listed.add(fn.norm(name))
-            lv = risk.get(p.get("proj_id"))
+            lv = risk.get(pid)
             funds.append({"name": name, "group": LEVEL_GROUP.get(lv, MM_GROUP), "auto": True})
             resolved[name] = {
-                "proj_id": p.get("proj_id"), "proj_abbr_name": str(p.get("proj_abbr_name") or "").strip(),
+                "proj_id": pid, "proj_abbr_name": str(p.get("proj_abbr_name") or "").strip(),
                 "fund_class_name": cls, "proj_name_th": p.get("proj_name_th"),
                 "comp_name_th": p.get("comp_name_th"), "name": name,
             }
             added += 1
-        print(f"เพิ่มกองความเสี่ยง {sorted(MM_LEVELS)} อัตโนมัติ {added} กอง")
+        print(f"เพิ่มกองความเสี่ยง {sorted(MM_LEVELS)} อัตโนมัติ {added} กอง (class หลัก, ไม่รวมกองภาษี)")
     for f in funds:
         if f["name"] in resolved:
             continue
@@ -239,6 +375,10 @@ def main():
                 break
         return
 
+    for f in funds:
+        if f.get("port") and f["name"] in resolved:
+            f["group"] = LEVEL_GROUP.get(risk.get(resolved[f["name"]]["proj_id"]), f["group"])
+    extras = load_extras()
     notes_path = DATA / "notes.json"
     notes = json.loads(notes_path.read_text()) if notes_path.exists() else {}
     funds.sort(key=lambda f: (f["group"], f["name"]))
@@ -273,6 +413,9 @@ def main():
             "info": info,
             "sec": scalar_fields(raw_profile(info)),
             "risk": risk.get(info["proj_id"]),
+            "x": {**extras.get(ckey(info["proj_id"], info["fund_class_name"]), {}),
+                  **({"aum": AUM[ckey(info["proj_id"], info["fund_class_name"])]}
+                     if ckey(info["proj_id"], info["fund_class_name"]) in AUM else {})},
             "warning": warn,
             "note": stitched,
             "s": days[0].isoformat() if days else None,
