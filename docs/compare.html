@@ -84,7 +84,12 @@
   .count { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
   .upload { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
   .upload p { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
-  .upload input[type=text] { width: 100%; font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; margin-bottom: 8px; }
+  .upload .steps { margin: 0 0 12px; padding-left: 20px; font-size: 13px; line-height: 1.7; color: var(--ink); }
+  .upload .steps a { color: var(--navy); font-weight: 600; }
+  .upload .kbd { display: inline-flex; align-items: center; gap: 1px; vertical-align: -4px; border: 1px solid var(--line); border-radius: 5px; padding: 1px 3px; background: #fff; color: var(--ink); }
+  .upload .kbd .ico { width: 16px; height: 16px; }
+  .upload .kbd .caret { width: 9px; height: 9px; }
+  .upload .note-sm { margin: 10px 0 0; font-size: 12px; }
 
   /* กราฟ */
   .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -225,9 +230,16 @@
       <div class="count" id="count"></div>
       <div class="upload">
         <h2>เพิ่มข้อมูล FIXEDSP</h2>
-        <input type="text" id="csvName" placeholder="ชื่อเส้น (ไม่ใส่ = FIXEDSP)">
+        <p>หน้าเว็บนี้เปิดเป็น Public จึงไม่ได้เก็บข้อมูล FIXEDSP ไว้ ดาวน์โหลดไฟล์จาก Tableau แล้วนำมาใส่ที่นี่</p>
+        <ol class="steps">
+          <li>เปิด <a href="https://tableau.sawasdee.brk1/#/views/All_model_performance/ModelPerformance?:iid=1" target="_blank" rel="noopener">Tableau · Model Performance</a></li>
+          <li>เลือกโมเดล <b>FIXEDSP</b></li>
+          <li>กด <span class="kbd"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="caret" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5z" fill="currentColor"/></svg></span> (Download) → <b>Data</b></li>
+          <li>กดปุ่มด้านล่าง แล้วเลือกไฟล์ที่ดาวน์โหลดมา</li>
+        </ol>
         <input type="file" id="csvFile" accept=".csv,.txt,text/csv" hidden>
-        <button class="btn ghost sm" id="csvBtn">เลือกไฟล์ CSV</button>
+        <button class="btn primary sm" id="csvBtn">เลือกไฟล์</button>
+        <p class="note-sm">หมายเหตุ: ข้อมูลอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหรือปิดหน้า</p>
       </div>
     </aside>
 
@@ -276,7 +288,7 @@
     </section>
   </div>
 
-  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · ข้อมูล FIXEDSP ที่อัปโหลดเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น</footer>
+  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · ข้อมูล FIXEDSP ที่ใส่ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหน้า</footer>
 </main>
 
 <div id="report">
@@ -432,17 +444,14 @@ function parseCSV(text) {
 async function onCSV(file) {
   try {
     const lines = parseCSV(await file.text());
-    const typed = $("csvName").value.trim();
     const added = [];
     for (const p of lines) {
-      const name = ((lines.length === 1 ? typed : "") || p.name || typed || "FIXEDSP").slice(0, 40);
+      const name = (p.name || "FIXEDSP").slice(0, 40);
       CUSTOM = CUSTOM.filter(c => c.name !== name);
       CUSTOM.unshift({ name, group: "FIXEDSP", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
       added.push(`${name} (${p.d.length} วัน ถึง ${thDate(p.d.at(-1))})`);
       selected = [name, ...selected.filter(n => n !== name)].slice(0, MAX_SEL);
     }
-    store.set(CUSTOM.map(({ name, d, v, info }) => ({ name, d, v, info })));
-    $("csvName").value = "";
     rebuildDates(); renderList(); update();
     toast(`เพิ่ม ${added.join(", ")}`);
   } catch (e) { toast("อ่านไฟล์ไม่ได้: " + e.message); }
@@ -528,7 +537,6 @@ $("list").addEventListener("click", (e) => {
   const n = e.target.dataset.del; if (!n) return;
   e.preventDefault();
   CUSTOM = CUSTOM.filter(c => c.name !== n);
-  store.set(CUSTOM.map(({ name, d, v, info }) => ({ name, d, v, info })));
   selected = selected.filter(x => x !== n);
   rebuildDates(); renderList(); update();
 });
@@ -1114,7 +1122,9 @@ function update() {
 (async function init() {
   try { COLORS = JSON.parse(localStorage.getItem(COLOR_STORE) || "{}") || {}; } catch (e) { COLORS = {}; }
   try { setLang(localStorage.getItem("compare-lang") || "th"); } catch (e) { setLang("th"); }
-  CUSTOM = store.get().filter(c => c && c.name && Array.isArray(c.d)).map(c => ({ ...c, group: "FIXEDSP", custom: true, sec: {} }));
+  // ไม่จำข้อมูล FIXEDSP: ล้างของเดิมที่เวอร์ชันก่อนเคยเก็บไว้ในเบราว์เซอร์
+  try { localStorage.removeItem(STORE); } catch (e) {}
+  CUSTOM = [];
   try {
     const r = await fetch("compare/data.json?v=" + Date.now());
     if (!r.ok) throw new Error(r.status);
