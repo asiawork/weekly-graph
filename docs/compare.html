@@ -162,6 +162,14 @@
   .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; color: var(--ink); }
   .chk input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
   .barcard { margin-top: 16px; }
+  .peerbox { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13.5px; }
+  .peerin { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+  .peerin input { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; }
+  .peerin { white-space: nowrap; flex-wrap: nowrap; }
+  .peerin input { flex: none; }
+  .peerin input[type=number] { width: 84px !important; }
+  .peerin input[type=date] { width: auto; }
+  .peerin[aria-disabled=true] { opacity: .45; }
   .cardtitle { margin: 0 0 6px !important; font-size: 17px; }
   .src { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
   .dt tbody td { min-width: 150px; }
@@ -297,7 +305,12 @@
       <div class="card barcard" id="barCard">
         <div class="head">
           <div><h3 class="cardtitle">ผลตอบแทนรายปี</h3>
-            <label class="chk"><input type="checkbox" id="showPeer" checked> แสดงค่าเฉลี่ยกลุ่ม Short Term General Bond (AIMC)</label></div>
+            <div class="peerbox">
+              <label class="chk"><input type="checkbox" id="showPeer" checked> แสดงค่าเฉลี่ยกลุ่ม Short Term General Bond</label>
+              <span class="peerin" id="peerIn">YTD <span id="peerYear">2026</span>
+                <input type="number" id="peerYtd" step="0.01" placeholder="เช่น 0.73" aria-label="ค่าเฉลี่ยกลุ่ม YTD (%)"> %
+                ณ <input type="date" id="peerDate" aria-label="ข้อมูล ณ วันที่"></span>
+            </div></div>
           <div class="actions">
             <button class="btn primary" id="copyBar">Copy รูป</button>
             <button class="btn ghost" id="dlBar">ดาวน์โหลด PNG</button>
@@ -682,9 +695,10 @@ function niceStep(span, target) {
 }
 function draw(ctx, opts = {}) { return drawLine(ctx, opts); }
 /* ---------- กราฟแท่ง: ผลตอบแทนรายปีปฏิทิน ---------- */
-const m_ytd = (a) => (a && a.ytd != null && a.ytd !== "") ? +a.ytd : null;
 const navOn = (f, iso) => { if (!f.d.length || f.d[0] > iso) return null; let lo = 0, hi = f.d.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (f.d[m] <= iso) lo = m; else hi = m - 1; } return f.v[lo]; };
-let AIMC = null;   // ค่าเฉลี่ยกลุ่มจาก docs/compare/aimc.json
+// ค่าเฉลี่ยกลุ่ม Short Term General Bond (AIMC) ปีที่จบแล้ว ใช้ค่าตามสไลด์ · ปีล่าสุด (YTD) ผู้ใช้กรอกเอง
+const PEER_YEARS = { 2022: 0.55, 2023: 1.53, 2024: 2.11, 2025: 1.93 };
+const peerYtd = () => { const v = $("peerYtd").value.trim(); return v === "" || isNaN(+v) ? null : +v; };
 function annualModel() {
   const fs = selected.map(byName).filter(f => f && f.d.length);
   if (!fs.length) return null;
@@ -702,9 +716,10 @@ function annualModel() {
   }) }));
   // ค่าเฉลี่ยกลุ่ม (AIMC): ปีที่จบแล้วจากรายงาน · YTD เฉพาะปีเดียวกับรายงาน
   let peer = null;
-  if (AIMC && $("showPeer").checked) {
-    const vals = years.map(y => y === lastY ? (+AIMC.asof.slice(0, 4) === y && m_ytd(AIMC) != null ? AIMC.ytd : (AIMC.years?.[y] ?? null)) : (AIMC.years?.[y] ?? null));
-    if (vals.some(v => v != null)) { peer = { name: LANG === "en" ? AIMC.label_en : AIMC.label, color: "#d6dbe3", peer: true, vals }; rows.push(peer); }
+  $("peerYear").textContent = lastY;
+  if ($("showPeer").checked) {
+    const vals = years.map(y => y === lastY && ytd ? peerYtd() : (PEER_YEARS[y] ?? null));
+    if (vals.some(v => v != null)) { peer = { name: LANG === "en" ? "Peer average*" : "ค่าเฉลี่ยกลุ่ม*", color: "#d6dbe3", peer: true, vals, ytdOn: ytd && peerYtd() != null }; rows.push(peer); }
   }
   return { years, ytd, ytdEnd, rows, peer };
 }
@@ -721,9 +736,10 @@ function drawBars(ctx) {
     ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42);
   }
   if (!m) { ctx.restore(); return; }
+  const pd = $("peerDate").value, pdOn = m.peer && m.peer.ytdOn && pd;
   const foot = m.peer ? (LANG === "en"
-      ? `*${AIMC.category} category average, AIMC Category Performance Report (Morningstar)${m.ytd ? `, YTD as of ${+AIMC.asof.slice(8)} ${EN_MON[+AIMC.asof.slice(5, 7) - 1]} ${AIMC.asof.slice(0, 4)}` : ""}`
-      : `*ค่าเฉลี่ยกลุ่มกองทุน ${AIMC.category} จาก AIMC Category Performance Report (Morningstar)${m.ytd ? ` · YTD ณ ${thDate(AIMC.asof)}` : ""}`) : "";
+      ? `*Short Term General Bond category average (AIMC)${pdOn ? `, YTD as of ${+pd.slice(8)} ${EN_MON[+pd.slice(5, 7) - 1]} ${pd.slice(0, 4)}` : ""}`
+      : `*ค่าเฉลี่ยกลุ่มกองทุน Short Term General Bond (AIMC)${pdOn ? ` · YTD ณ ${thDate(pd)}` : ""}`) : "";
   const L = 74, R = 24, T = showTitle ? 80 : 34, legendH = 40, B = 40 + legendH + (foot ? 24 : 0), pw = W - L - R, ph = H - T - B;
   const all = m.rows.flatMap(r => r.vals).filter(v => v != null);
   let y0 = Math.min(0, ...all), y1 = Math.max(0, ...all, 0.01);
@@ -1207,7 +1223,8 @@ $("dlBar").onclick = async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(await toBlob(exportBars(2))); a.download = fileName("png").replace(/\.png$/, "_รายปี.png"); a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 };
-$("showPeer").onchange = renderChart;
+const onPeer = () => { $("peerIn").setAttribute("aria-disabled", !$("showPeer").checked); renderChart(); saveHash(); };
+["showPeer", "peerYtd", "peerDate"].forEach(id => { $(id).oninput = onPeer; $(id).onchange = onPeer; });
 $("copyT1img").onclick = () => copyTableImage(modelT1());
 $("dlT1img").onclick = async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(await tablePng(modelT1()));
@@ -1234,6 +1251,9 @@ function saveHash() {
   const cs = selected.filter(n => COLORS[n]).map(n => n + ":" + COLORS[n].slice(1));
   if (cs.length) p.set("c", cs.join("|"));
   if (!$("align").checked) p.set("a", "0");
+  if (!$("showPeer").checked) p.set("np", "1");
+  if (peerYtd() != null) p.set("py", peerYtd());
+  if ($("peerDate").value) p.set("pd", $("peerDate").value);
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) {}
 }
 function loadHash() {
@@ -1247,6 +1267,9 @@ function loadHash() {
   if (p.get("l")) setLang(p.get("l"));
   for (const kv of (p.get("c") || "").split("|")) { const i = kv.lastIndexOf(":"); if (i > 0 && /^[0-9a-f]{6}$/i.test(kv.slice(i + 1))) COLORS[kv.slice(0, i)] = "#" + kv.slice(i + 1); }
   if (p.get("a") === "0") $("align").checked = false;
+  if (p.get("np") === "1") { $("showPeer").checked = false; $("peerIn").setAttribute("aria-disabled", true); }
+  if (p.get("py") && !isNaN(+p.get("py"))) $("peerYtd").value = p.get("py");
+  if (/^\d{4}-\d\d-\d\d$/.test(p.get("pd") || "")) $("peerDate").value = p.get("pd");
 }
 
 function update() {
@@ -1274,7 +1297,6 @@ function update() {
     const r = await fetch("compare/data.json?v=" + Date.now());
     if (!r.ok) throw new Error(r.status);
     DATA = await r.json();
-    try { const ra = await fetch("compare/aimc.json?v=" + Date.now()); if (ra.ok) AIMC = await ra.json(); } catch (e) {}
     for (const f of DATA.funds) if (!f.d) {
       const d = [], t0 = f.s ? dnum(f.s) : 0;
       if (f.s) { let t = t0; d.push(f.s); for (const k of f.dd || []) { t += k; d.push(isoOf(t)); } }
