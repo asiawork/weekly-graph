@@ -108,9 +108,26 @@ def load_extras(fetch_urls=True):
     """(proj_id|class) -> ข้อมูลเสริมสำหรับตารางรายละเอียด"""
     ex = {}
 
-    def put(row, k, v):
+    def newer(row, slot):
+        """ถ้า SEC ส่งหลายแถวต่อกอง (เช่น factsheet ตอน IPO + รายเดือน) ใช้แถวที่ start_date ใหม่สุด"""
         key = ckey(row.get("proj_id"), row.get("fund_class_name"))
-        ex.setdefault(key, {})[k] = v
+        d = str(row.get("start_date") or "")
+        cur = ex.setdefault(key, {}).get("_d_" + slot, "")
+        if d < cur:
+            return None
+        if d > cur:
+            ex[key]["_d_" + slot] = d
+            if slot == "fees":
+                ex[key].pop("fees", None)
+        return key
+
+    def put_stats(row):
+        key = newer(row, "stats")
+        if key is None:
+            return
+        ex[key]["duration"] = row.get("portfolio_duration_period")
+        ex[key]["ytm"] = row.get("yield_to_maturity")
+        ex[key]["stat_date"] = str(row.get("start_date") or "")[:10]
 
     def put_fee(row):
         # เก็บเฉพาะค่าธรรมเนียมที่ตารางใช้: ค่าธรรมเนียมขาย (front-end) และค่าใช้จ่ายรวม / ค่าธรรมเนียมการจัดการ
@@ -119,21 +136,25 @@ def load_extras(fetch_urls=True):
             return
         if re.search(r"ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch", desc, re.I) and not re.search(r"front", desc, re.I):
             return
+        key = newer(row, "fees")
+        if key is None:
+            return
         e = {"rate": row.get("rate"), "actual": row.get("actual_value")}
         if e["actual"] in (None, "") and e["rate"] in (None, ""):
             e["other"] = str(row.get("fee_other_desc") or "")[:80]
-        ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {}).setdefault("fees", {})[desc] = e
+        ex[key].setdefault("fees", {})[desc] = e
 
     def put_redemp(row):
         if str(row.get("type") or "").lower() != "redemption":
             return
+        key = newer(row, "redemp")
+        if key is None:
+            return
         e = {k: row.get(k) for k in ("type", "period", "redemp_period_oth", "settlement_period") if row.get(k) not in (None, "")}
-        ex.setdefault(ckey(row.get("proj_id"), row.get("fund_class_name")), {})["redemp"] = [e]
+        ex[key]["redemp"] = [e]
 
     jobs = [
-        ("statistics", STATS_URL, lambda row: (
-            put(row, "duration", row.get("portfolio_duration_period")),
-            put(row, "ytm", row.get("yield_to_maturity")))),
+        ("statistics", STATS_URL, put_stats),
         ("fees", FEES_URL, put_fee),
         ("redemption", REDEMP_URL, put_redemp),
     ]
@@ -158,6 +179,9 @@ def load_extras(fetch_urls=True):
                 ex[key]["fs"] = [link, d, row.get("amc_url_factsheet") or ""]
     except Exception as e:  # noqa: BLE001
         print(f"  ! ดึง factsheet urls ไม่ได้: {e}")
+    for v in ex.values():
+        for k in [k for k in v if k.startswith("_d_")]:
+            del v[k]
     return ex
 
 
