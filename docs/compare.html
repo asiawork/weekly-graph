@@ -8,13 +8,17 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
+    --font-text: "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif;
+    --font-head: "BLS Bold", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif;
     --navy: #1b3560; --navy-2: #24467d; --red: #d0273e;
     --bg: #f4f6f9; --card: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
     --pos: #0f8a4b; --neg: #c62828;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
-         font-family: "IBM Plex Sans Thai", system-ui, sans-serif; font-size: 15px; }
+         font-family: var(--font-text); font-size: 15px; }
+  /* ฟอนต์บริษัท (ต้องติดตั้งในเครื่อง) — เครื่องที่ไม่มีจะใช้ IBM Plex Sans Thai แทน */
+  h1, h2, h3, h4, th, .tabs a, .btn, .grp-name, .sec-title, .docbtn, .tag { font-family: var(--font-head); }
   header { background: var(--navy); color: #fff; padding: 22px 16px 26px; }
   /* แท็บสลับหน้า */
   header.has-tabs { padding-bottom: 0; }
@@ -273,7 +277,9 @@ const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5
 const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
-const W = 1200, H = 560, FONT = '"IBM Plex Sans Thai", system-ui, sans-serif';
+const W = 1200, H = 560;
+const FONT = '"BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
+const FONT_B = '"BLS Bold", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
 
 let DATA = { funds: [], missing: {} };
 let CUSTOM = [];          // เส้นจาก CSV
@@ -608,12 +614,12 @@ function draw(ctx, opts = {}) {
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
   // ป้ายท้ายเส้น = ชื่อกอง + ค่าล่าสุด (แทน legend) · เผื่อที่ทางขวาให้พอดีป้ายที่ยาวที่สุด
   const tagText = (s) => `${s.name}  ${pct(s.pts.at(-1)[1], 2)}`;
-  ctx.font = `700 16px ${FONT}`;
+  ctx.font = `700 16px ${FONT_B}`;
   const tagW = Math.max(0, ...ser.map(s => ctx.measureText(tagText(s)).width)) + 20;
   const L = 70, R = Math.min(420, Math.max(120, tagW + 24)), T = title ? 70 : 30;
   const B = 70;
   const pw = W - L - R, ph = H - T - B;
-  if (title) { ctx.font = `600 26px ${FONT}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
+  if (title) { ctx.font = `600 26px ${FONT_B}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
   if (!ser.length) { ctx.restore(); layout = null; return; }
 
   const x0 = dnum(startInfo().s), x1 = Math.max(dnum(range.e), x0 + 1);
@@ -671,7 +677,7 @@ function draw(ctx, opts = {}) {
   const over = tags.length ? tags.at(-1).y - (T + ph) : 0;
   if (over > 0) { tags.forEach(t => t.y -= over); for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < gap) tags[i].y = tags[i + 1].y - gap; }
   for (const t of tags) {
-    ctx.font = `${t.s.hi ? 700 : 600} 16px ${FONT}`;
+    ctx.font = `${t.s.hi ? 700 : 600} 16px ${FONT_B}`;
     const txt = tagText(t.s), w = ctx.measureText(txt).width + 20, x = L + pw + 10;
     ctx.fillStyle = t.s.color; roundRect(ctx, x, t.y - 14, w, 28, 7); ctx.fill();
     ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 10, t.y + 0.5);
@@ -881,8 +887,8 @@ function renderTable() {
 async function copyModel(m) {
   const txt = (v) => v || "";
   const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
-  const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:Tahoma,sans-serif;font-size:11pt;text-align:center;";
-  const hd = td + "background:#1b3560;color:#fff;font-weight:bold;";
+  const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:'BLS Text',Tahoma,sans-serif;font-size:11pt;text-align:center;";
+  const hd = td + "background:#1b3560;color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;";
   const html = `<table style="border-collapse:collapse"><tr><th style="${hd}">กองทุน</th>${m.cols.map(c => `<th style="${td}font-weight:bold">${esc(c.name)}</th>`).join("")}</tr>` +
     m.rows.map(([l, vs]) => `<tr><td style="${hd}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
