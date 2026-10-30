@@ -745,7 +745,7 @@ const STYLE = {
 };
 const fxText = (f) => { const v = f.sec?.exchange_rate_protection_policy; return v ? String(v).replace(/\s*\(.*$/, "") : ""; };
 function renderInfos() {
-  const fs = selected.map(byName).filter(Boolean);
+  const fs = selected.map(byName).filter(f => f && !f.custom);   // ไม่แสดงการ์ด FIXEDSP (ข้อมูลจาก CSV)
   $("infos").innerHTML = fs.map(f => {
     const sec = f.sec || {}, st = sec.management_style;
     const rows = f.custom ? [] : [
