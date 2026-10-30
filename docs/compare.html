@@ -305,59 +305,115 @@ const colorOf = (n) => COLORS[n] || PALETTE[Math.max(0, selected.indexOf(n)) % P
 const saveColors = () => { try { localStorage.setItem(COLOR_STORE, JSON.stringify(COLORS)); } catch (e) {} };
 
 /* ---------- CSV */
-function parseDateCell(s) {
+const MON_EN = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+// order: "dmy" (ค่าเริ่มต้นแบบไทย) หรือ "mdy" (แบบอเมริกัน เช่นไฟล์ที่ export จาก Tableau)
+function parseDateCell(s, order = "dmy") {
   s = String(s).trim().replace(/^"|"$/g, "");
   if (!s) return null;
   if (/^\d{5}(\.\d+)?$/.test(s)) { const n = Math.floor(+s); if (n > 20000 && n < 80000) return isoOf(n - 25569); } // Excel serial
   let y, m, d, x;
   if ((x = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/))) { y = +x[1]; m = +x[2]; d = +x[3]; }
-  else if ((x = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/))) { d = +x[1]; m = +x[2]; y = +x[3]; }
-  else if ((x = s.match(/^(\d{1,2})[- ]([A-Za-z]{3})[A-Za-z]*[- ](\d{2,4})/))) {
-    d = +x[1]; m = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(x[2].toLowerCase()) + 1; y = +x[3];
-    if (!m) return null;
-  } else return null;
+  else if ((x = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/))) { [d, m] = order === "mdy" ? [+x[2], +x[1]] : [+x[1], +x[2]]; y = +x[3]; }
+  else if ((x = s.match(/^(\d{1,2})[- ]([A-Za-z]{3})[A-Za-z]*\.?[- ,]+(\d{2,4})/))) { d = +x[1]; m = MON_EN.indexOf(x[2].toLowerCase()) + 1; y = +x[3]; }
+  else if ((x = s.match(/^([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{1,2}),?\s+(\d{2,4})/))) { m = MON_EN.indexOf(x[1].toLowerCase()) + 1; d = +x[2]; y = +x[3]; } // April 1, 2019
+  else return null;
+  if (!m) return null;
   if (y < 100) { const nowYY = new Date().getFullYear() % 100; y = y > nowYY + 5 ? 2500 + y - 543 : 2000 + y; }
   if (y > 2400) y -= 543;
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
+// ดูทั้งคอลัมน์ว่าเป็น วัน/เดือน หรือ เดือน/วัน
+function dateOrder(cells) {
+  let dmy = false, mdy = false;
+  for (const c of cells) {
+    const x = String(c).trim().match(/^(\d{1,2})[-/.](\d{1,2})[-/.]\d{2,4}/); if (!x) continue;
+    if (+x[1] > 12) dmy = true;
+    if (+x[2] > 12) mdy = true;
+  }
+  return mdy && !dmy ? "mdy" : "dmy";
+}
+// แยก CSV แบบรองรับเครื่องหมายคำพูด (เช่น "April 1, 2019")
+function csvSplit(text, delim) {
+  const out = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cur.trim()); cur = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cur.trim()); if (row.some(c => c)) out.push(row); row = []; cur = ""; }
+    else cur += ch;
+  }
+  row.push(cur.trim()); if (row.some(c => c)) out.push(row);
+  return out;
+}
+const numCell = (c) => { const t = String(c ?? "").replace(/[,%\s]/g, ""); if (!/^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(t)) return null; const v = +t; return isFinite(v) ? v : null; };
+// คืนรายการเส้น [{name, d, v, mode}] — ถ้าไฟล์มีคอลัมน์ชื่อพอร์ต/โมเดลหลายค่า จะได้หลายเส้น
 function parseCSV(text) {
-  const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) throw new Error("ไฟล์มีข้อมูลน้อยเกินไป");
-  const delim = [",", ";", "\t"].sort((a, b) => lines[0].split(b).length - lines[0].split(a).length)[0];
-  const split = (l) => l.split(delim).map(c => c.trim().replace(/^"|"$/g, ""));
-  const num = (c) => { const v = parseFloat(String(c).replace(/[,%\s]/g, "")); return isFinite(v) ? v : null; };
-  let rows = lines.map(split), header = null;
-  if (!parseDateCell(rows[0][0]) && rows[0].some(c => num(c) == null)) header = rows.shift();
-  const ncol = Math.max(...rows.slice(0, 20).map(r => r.length));
-  let dc = -1;
-  for (let c = 0; c < ncol && dc < 0; c++) if (rows.slice(0, 20).filter(r => parseDateCell(r[c] ?? "")).length >= Math.min(5, rows.length) * 0.8) dc = c;
+  text = text.replace(/^﻿/, "");
+  const first = text.split(/\r?\n/, 1)[0];
+  const delim = [",", ";", "\t"].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+  let rows = csvSplit(text, delim);
+  if (rows.length < 2) throw new Error("ไฟล์มีข้อมูลน้อยเกินไป");
+  let header = null;
+  if (!parseDateCell(rows[0][0], "dmy") && !parseDateCell(rows[0][0], "mdy") && rows[0].some(c => numCell(c) == null)) header = rows.shift();
+  const ncol = Math.max(...rows.slice(0, 50).map(r => r.length));
+  const col = (c) => rows.map(r => r[c] ?? "");
+  // คอลัมน์วันที่ = คอลัมน์ที่อ่านเป็นวันที่ได้และมีวันที่ต่างกันมากที่สุด (ข้ามคอลัมน์อย่าง "Max Date" ที่ค่าเดียวทั้งไฟล์)
+  let dc = -1, best = 1, order = "dmy";
+  for (let c = 0; c < ncol; c++) {
+    const cells = col(c), o = dateOrder(cells), set = new Set();
+    let ok = 0; for (const x of cells) { const d = parseDateCell(x, o); if (d) { ok++; set.add(d); } }
+    if (ok >= rows.length * 0.8 && set.size > best) { best = set.size; dc = c; order = o; }
+  }
   if (dc < 0) throw new Error("หาคอลัมน์วันที่ไม่เจอ");
-  let vc = -1;
-  if (header) vc = header.findIndex((h, i) => i !== dc && /nav|index|value|ราคา|มูลค่า|%|return|ผลตอบแทน/i.test(h));
-  if (vc < 0) for (let c = ncol - 1; c >= 0; c--) if (c !== dc && rows.slice(0, 20).filter(r => num(r[c] ?? "") != null).length >= Math.min(5, rows.length) * 0.8) { vc = c; break; }
+  // คอลัมน์ค่า: หัวคอลัมน์ที่บอกว่าเป็น NAV / % / ผลตอบแทน ก่อน ไม่งั้นใช้คอลัมน์ตัวเลขขวาสุด
+  const numericCol = (c) => c !== dc && col(c).filter(x => numCell(x) != null).length >= rows.length * 0.8;
+  let vc = header ? header.findIndex((h, i) => numericCol(i) && /nav|index|value|ราคา|มูลค่า|%|return|ผลตอบแทน|difference|change/i.test(h)) : -1;
+  if (vc < 0) for (let c = ncol - 1; c >= 0; c--) if (numericCol(c)) { vc = c; break; }
   if (vc < 0) throw new Error("หาคอลัมน์ตัวเลขไม่เจอ");
-  const pts = new Map();
-  for (const r of rows) { const d = parseDateCell(r[dc] ?? ""), v = num(r[vc] ?? ""); if (d && v != null) pts.set(d, v); }
-  const d = [...pts.keys()].sort();
-  let v = d.map(k => pts.get(k));
-  if (d.length < 2) throw new Error("อ่านได้น้อยกว่า 2 วัน");
   const hdr = header ? header[vc] : "";
-  const isPct = /%|return|ผลตอบแทน|change/i.test(hdr) || Math.abs(v[0]) < 1e-9 || v.some(x => x <= 0);
-  if (isPct) v = v.map(x => 100 * (1 + x / 100));
-  return { d, v, mode: isPct ? "% สะสม" : "NAV/index" };
+  const pctFlag = /%|return|ผลตอบแทน|change|difference/i.test(hdr) || col(vc).slice(0, 20).some(x => /%/.test(x));
+  // คอลัมน์ชื่อพอร์ต/โมเดล (ถ้ามี) แยกเป็นหลายเส้น
+  let nc = header ? header.findIndex((h, i) => i !== dc && i !== vc && /model|portfolio|port|name|ชื่อ|กองทุน|fund/i.test(h)) : -1;
+  if (nc >= 0) { const names = new Set(col(nc).filter(Boolean)); if (names.size < 1 || names.size > 20 || [...names].every(n => parseDateCell(n))) nc = -1; }
+  const groups = new Map();
+  for (const r of rows) {
+    const d = parseDateCell(r[dc] ?? "", order), v = numCell(r[vc]);
+    if (!d || v == null) continue;
+    const g = nc >= 0 ? (r[nc] || "").trim() : "";
+    if (!groups.has(g)) groups.set(g, new Map());
+    groups.get(g).set(d, v);
+  }
+  const out = [];
+  for (const [g, pts] of groups) {
+    let d = [...pts.keys()].sort(), v = d.map(k => pts.get(k));
+    const isPct = pctFlag || Math.abs(v[0]) < 1e-9 || v.some(x => x <= 0);
+    if (isPct) v = v.map(x => 100 * (1 + x / 100));          // % สะสม → ดัชนีฐาน 100
+    // ตัดช่วงต้นที่ค่าไม่ขยับ (ก่อนพอร์ตเริ่มลงทุน) เหลือจุดสุดท้ายของช่วงนั้นไว้เป็นฐาน
+    let k = 0; while (k < v.length - 2 && v[k + 1] === v[0]) k++;
+    if (k > 5) { d = d.slice(k); v = v.slice(k); }
+    if (d.length >= 2) out.push({ name: g, d, v, mode: isPct ? "% สะสม" : "NAV/index" });
+  }
+  if (!out.length) throw new Error("อ่านได้น้อยกว่า 2 วัน");
+  return out;
 }
 async function onCSV(file) {
   try {
-    const p = parseCSV(await file.text());
-    const name = ($("csvName").value.trim() || "FIXEDSP").slice(0, 40);
-    CUSTOM = CUSTOM.filter(c => c.name !== name);
-    CUSTOM.unshift({ name, group: "FIXEDSP", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
+    const lines = parseCSV(await file.text());
+    const typed = $("csvName").value.trim();
+    const added = [];
+    for (const p of lines) {
+      const name = ((lines.length === 1 ? typed : "") || p.name || typed || "FIXEDSP").slice(0, 40);
+      CUSTOM = CUSTOM.filter(c => c.name !== name);
+      CUSTOM.unshift({ name, group: "FIXEDSP", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
+      added.push(`${name} (${p.d.length} วัน ถึง ${thDate(p.d.at(-1))})`);
+      selected = [name, ...selected.filter(n => n !== name)].slice(0, MAX_SEL);
+    }
     store.set(CUSTOM.map(({ name, d, v, info }) => ({ name, d, v, info })));
-    selected = [name, ...selected.filter(n => n !== name)].slice(0, MAX_SEL);
     $("csvName").value = "";
     rebuildDates(); renderList(); update();
-    toast(`เพิ่ม ${name} แล้ว (${p.d.length} วัน, อ่านเป็น ${p.mode})`);
+    toast(`เพิ่ม ${added.join(", ")}`);
   } catch (e) { toast("อ่านไฟล์ไม่ได้: " + e.message); }
 }
 
