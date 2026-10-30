@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# ข้อมูล FIXEDSP ใช้บน server ภายในเท่านั้น ห้ามขึ้น GitHub
+fixedsp.csv
+docs/fixedsp.csv
