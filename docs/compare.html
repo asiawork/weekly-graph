@@ -202,17 +202,17 @@
   @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
 
   @media print {
-    @page { size: A4 landscape; margin: 12mm; }
-    body { background: #fff; font-size: 11pt; }
-    header, .layout, footer, .toast, .notice { display: none !important; }
+    /* ขอบกระดาษ 0 = ไม่มีวันที่/ลิงก์ของเบราว์เซอร์ที่หัว-ท้ายหน้า · เว้นขอบเองใน .page */
+    @page { size: A4 landscape; margin: 0; }
+    html, body { background: #fff !important; margin: 0; }
+    header, main, footer, .toast, .notice { display: none !important; }
     #report { display: block; }
-    #report h1 { margin: 0; color: var(--navy); font-size: 18pt; }
-    #report .meta { color: var(--muted); font-size: 10pt; margin: 2px 0 10px; }
-    #report img { width: 100%; border: 1px solid var(--line); }
-    #report table { margin-top: 10px; page-break-inside: avoid; }
-    #report th, #report td { font-size: 9pt; padding: 4px 6px; }
-    #report thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #report .foot { color: var(--muted); font-size: 8.5pt; margin-top: 8px; }
+    #report .page { width: 297mm; height: 210mm; padding: 14mm 16mm; box-sizing: border-box; display: flex; flex-direction: column;
+                    justify-content: center; align-items: center; page-break-after: always; break-after: page; overflow: hidden; }
+    #report .page:last-child { page-break-after: auto; break-after: auto; }
+    #report .page h2 { align-self: stretch; margin: 0 0 6mm; font-family: var(--font-head); font-weight: 700; font-size: 20pt; color: var(--navy); }
+    #report .page img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+    #report .page .foot { align-self: stretch; margin-top: 4mm; color: #8a929e; font-size: 9pt; text-align: right; }
   }
 </style>
 </head>
@@ -308,11 +308,8 @@
 </main>
 
 <div id="report">
-  <h1 id="rTitle"></h1>
-  <div class="meta" id="rMeta"></div>
-  <img id="rImg" alt="">
-  <div id="rTbl"></div>
-  <div class="foot">ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย · ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต</div>
+  <div class="page"><img id="rImg" alt=""><div class="foot" id="rFoot1"></div></div>
+  <div class="page"><h2>เทียบกับ FIXEDSP</h2><img id="rTblImg" alt=""><div class="foot" id="rFoot2"></div></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1012,7 +1009,11 @@ function tableCanvas(m, scale = 3) {
     const out = [];
     for (const para of String(text || "").split("\n")) {
       if (ctx.measureText(para).width <= maxW) { out.push(para); continue; }
-      const parts = para.split(/(?<=\/)|(?<= )/); let line = "";
+      // ตัดคำภาษาไทยด้วย Intl.Segmenter (ไทยไม่มีช่องว่างระหว่างคำ) ถ้าไม่มีให้ตัดที่ "/" หรือช่องว่าง
+      const parts = typeof Intl !== "undefined" && Intl.Segmenter
+        ? [...new Intl.Segmenter("th", { granularity: "word" }).segment(para)].map(x => x.segment)
+        : para.split(/(?<=\/)|(?<= )/);
+      let line = "";
       for (const p of parts) { if (line && ctx.measureText(line + p).width > maxW) { out.push(line.trim()); line = p; } else line += p; }
       if (line) out.push(line.trim());
     }
@@ -1021,7 +1022,8 @@ function tableCanvas(m, scale = 3) {
   const cell = (text, x, y, w, size, font, color) => {
     let sz = size, lines;
     for (;;) { ctx.font = `${font === "b" ? 700 : 400} ${sz}px ${font === "b" ? FONT_B : FONT}`; lines = wrap(text, w - 10);
-      if (lines.length * sz * 1.25 <= rh - 4 || sz <= 8) break; sz -= 0.5; }
+      const fitsW = lines.every(l => ctx.measureText(l).width <= w - 10);
+      if ((fitsW && lines.length * sz * 1.25 <= rh - 4) || sz <= 8) break; sz -= 0.5; }
     ctx.fillStyle = color;
     lines.forEach((ln, i) => ctx.fillText(ln, x + w / 2, y + rh / 2 + (i - (lines.length - 1) / 2) * sz * 1.25 + 0.5));
   };
@@ -1081,12 +1083,13 @@ $("download").onclick = async () => {
 };
 $("print").onclick = () => {
   if (!selected.length) return;
-  $("rTitle").textContent = $("title").value.trim() || "เปรียบเทียบผลตอบแทน " + selected.join(" · ");
-  $("rMeta").textContent = `ช่วงข้อมูล ${thDate(startInfo().s)} – ${thDate(startInfo().e)} · พิมพ์เมื่อ ${thDate(new Date().toISOString().slice(0, 10))} · ข้อมูลอัปเดต ${thDate(DATA.updated)}`;
-  $("rImg").src = exportCanvas(2).toDataURL("image/png");
-  $("rTbl").innerHTML = `<table>${$("perf").innerHTML}</table><h3>เทียบกับ FIXEDSP</h3><table>${$("t1").innerHTML}</table>`;
+  // หน้า 1 = กราฟ · หน้า 2 = ตารางเทียบ FIXEDSP (รูปเดียวกับปุ่ม Copy เป็นรูป)
+  $("rImg").src = exportCanvas(3).toDataURL("image/png");
+  $("rTblImg").src = tableCanvas(modelT1(), 3).toDataURL("image/png");
+  $("rFoot1").textContent = $("rFoot2").textContent = `ข้อมูล ณ วันที่ ${thDate(startInfo().e)}`;
   const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
-  setTimeout(() => { window.print(); document.title = old; }, 150);
+  Promise.all(["rImg", "rTblImg"].map(id => $(id).decode().catch(() => {})))
+    .then(() => setTimeout(() => { window.print(); document.title = old; }, 50));
 };
 $("copyT1").onclick = () => copyModel(modelT1());
 $("copyT1img").onclick = () => copyTableImage(modelT1());
