@@ -224,7 +224,7 @@
     #report .page img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
     #report .page .foot { align-self: stretch; margin-top: 4mm; color: #8a929e; font-size: 9pt; text-align: right; }
   }
-  /* หน้าตาเหมือนตารางที่ Copy ไปวางในสไลด์: หัวข้อ 16 · กองอื่น 12 · FIXEDSP 14 (สัดส่วนเดียวกัน) */
+  /* หน้าตาเหมือนตารางที่ Copy ไปวางในสไลด์: หัวข้อ 16 · กองอื่น 12 · FIXEDSP 16 ตัวหนา */
   #t1 { border-collapse: collapse; border: 1px solid #1f2a44; table-layout: fixed; width: 100%; min-width: 640px; }
   #t1 th, #t1 td { text-align: center !important; vertical-align: middle !important; padding: 9px 12px; }
   #t1 th:first-child { background: #1b3560 !important; color: #fff !important; font-weight: 700; font-size: 16px; width: 34%;
@@ -233,8 +233,7 @@
   #t1 thead th:not(:first-child), #t1 td { background: #fff; color: #1b3560; font-weight: 400; font-size: 13px;
     border-left: 1px solid #1f2a44; border-bottom: 1px solid #e3e6eb; }
   #t1 thead th:not(:first-child) { border-bottom: 1px solid #1f2a44; }
-  #t1 .fx { background: #dce8fb !important; font-size: 15px !important; }
-  #t1 thead th.fx { font-weight: 700 !important; }
+  #t1 .fx { background: #dce8fb !important; font-size: 16px !important; font-weight: 700 !important; font-family: var(--font-head); }
   .card:has(> #t1) { border-radius: 0; overflow: hidden; }
   .pastehint { font-size: 12.5px; color: var(--muted); font-weight: 400; margin-right: 4px; }
   @media (max-width: 700px) { .pastehint { display: none; } }
@@ -769,14 +768,15 @@ function drawBars(ctx) {
   }
   // แท่ง: กลุ่มละปี
   const nG = m.years.length, nS = m.rows.length, gw = pw / nG;
-  const bw = Math.min(56, (gw * 0.72) / nS), gap = Math.min(12, bw * 0.25), groupW = nS * bw + (nS - 1) * gap;
+  // แท่งผอมลง เว้นระยะระหว่างปีมากขึ้น (กลุ่มแท่งกว้างราวครึ่งหนึ่งของช่องปี)
+  const bw = Math.min(44, (gw * 0.52) / nS), gap = Math.min(8, bw * 0.18), groupW = nS * bw + (nS - 1) * gap;
   m.years.forEach((yr, g) => {
     const cx = L + gw * g + gw / 2, x0 = cx - groupW / 2;
     m.rows.forEach((r, i) => {
       const v = r.vals[g]; if (v == null) return;
       const x = x0 + i * (bw + gap), ya = Y(Math.max(v, 0)), yb = Y(Math.min(v, 0));
       ctx.fillStyle = r.color; ctx.fillRect(x, ya, bw, Math.max(1, yb - ya));
-      ctx.font = `700 15px ${FONT_B}`; ctx.fillStyle = "#111827"; ctx.textAlign = "center";
+      ctx.font = `700 ${bw + gap >= 46 ? 15 : bw + gap >= 36 ? 13 : 11}px ${FONT_B}`; ctx.fillStyle = "#111827"; ctx.textAlign = "center";
       ctx.textBaseline = v >= 0 ? "bottom" : "top";
       ctx.fillText(v.toFixed(2) + "%", x + bw / 2, v >= 0 ? ya - 6 : yb + 6);
     });
@@ -1105,8 +1105,8 @@ function renderTable() {
   $("t1").innerHTML = tableHTML(modelT1());
 }
 /* ขนาดกรอบตารางในสไลด์ 16:9 (13.33 × 7.5 นิ้ว = 960 × 540 pt) ตามสไลด์ "รายละเอียดพอร์ตกองทุนตราสารหนี้ระยะสั้น"
-   ตารางกว้าง 878 pt สูง 398 pt · คอลัมน์หัวข้อกว้าง 340 pt · หัวข้อ 16 pt ตัวหนา · กองอื่น 12 pt · FIXEDSP 14 pt (หัวตัวหนา พื้นฟ้าอ่อน) */
-const SLIDE_T = { w: 878, h: 398, labelW: 340, labelSize: 16, bodySize: 12, fxSize: 14, fxBg: "#dce8fb" };
+   ตารางกว้าง 878 pt สูง 398 pt · คอลัมน์หัวข้อกว้าง 340 pt · หัวข้อ 16 pt ตัวหนา · กองอื่น 12 pt · FIXEDSP 16 pt BLS Bold (พื้นฟ้าอ่อน) */
+const SLIDE_T = { w: 878, h: 398, labelW: 340, labelSize: 16, bodySize: 12, fxSize: 16, fxBg: "#dce8fb" };
 const isFxCol = (c) => c.name === "FIXEDSP" && !c.f;
 const NAVY = "#1b3560", LINE = "#1f2a44";
 // PowerPoint บน Windows ที่ตั้งขนาดหน้าจอ (Display scale) เกิน 100% ย่อตารางที่วางลงตามสัดส่วนนั้น
@@ -1124,7 +1124,7 @@ async function copyModel(m) {
   const base = `border:1px solid ${LINE};padding:${pt(2)} ${pt(6)};text-align:center;vertical-align:middle;height:${pt(rowH)};`;
   const lab = base + `width:${pt(SLIDE_T.labelW)};background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${pt(SLIDE_T.labelSize)};border-color:#fff ${LINE};`;
   const cs = (c, head) => base + `width:${pt(colW)};background:${isFxCol(c) ? SLIDE_T.fxBg : "#fff"};color:${NAVY};` +
-    (head && isFxCol(c) ? `font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;` : `font-family:'BLS Text',Tahoma,sans-serif;`) +
+    (isFxCol(c) ? `font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;` : `font-family:'BLS Text',Tahoma,sans-serif;`) +
     `font-size:${pt(isFxCol(c) ? SLIDE_T.fxSize : SLIDE_T.bodySize)};`;
   const html = `<table style="border-collapse:collapse;width:${pt(SLIDE_T.w)}"><colgroup><col style="width:${pt(SLIDE_T.labelW)}">${m.cols.map(() => `<col style="width:${pt(colW)}">`).join("")}</colgroup>` +
     `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${cs(c, true)}">${esc(c.name)}</td>`).join("")}</tr>` +
@@ -1175,7 +1175,7 @@ function tableCanvas(m, scale = 3) {
     const y = ys[r]; rh = ys[r + 1] - ys[r];
     ctx.fillStyle = NAVY; ctx.fillRect(0, y, lw, rh);
     cell(label, 0, y, lw, fsL, "b", "#fff");
-    vals.forEach((v, i) => { const fx = isFxCol(m.cols[i]); cell(v, lw + i * cw, y, cw, fx ? fsF : fsB, isHead && fx ? "b" : "t", NAVY); });
+    vals.forEach((v, i) => { const fx = isFxCol(m.cols[i]); cell(v, lw + i * cw, y, cw, fx ? fsF : fsB, fx ? "b" : "t", NAVY); });
   });
   // เส้นตาราง: เส้นขาวคั่นแถวในคอลัมน์หัวข้อ, เส้นเทาคั่นแถวในเนื้อหา, เส้นเข้มคั่นคอลัมน์และใต้หัวตาราง
   ctx.lineWidth = 1;
