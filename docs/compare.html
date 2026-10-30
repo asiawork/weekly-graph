@@ -161,6 +161,8 @@
   .seg.sm button { padding: 4px 12px; font-size: 12.5px; }
   .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; color: var(--ink); }
   .chk input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
+  .barcard { margin-top: 16px; }
+  .cardtitle { margin: 0 0 6px !important; font-size: 17px; }
   .src { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
   .dt tbody td { min-width: 150px; }
   .dt thead th { text-align: center; }
@@ -276,7 +278,7 @@
             <button class="btn ghost" id="print">ดาวน์โหลดรายงาน (PDF)</button>
           </div>
         </div>
-        <div class="range">
+        <div class="range" id="rangeBox">
           <div class="seg" id="quick" role="group" aria-label="ช่วงเวลา">
             <button data-q="1M">1M</button><button data-q="3M">3M</button><button data-q="6M">6M</button><button data-q="YTD">YTD</button><button data-q="1Y">1Y</button><button data-q="3Y">3Y</button><button data-q="ALL">ทั้งหมด</button>
           </div>
@@ -289,7 +291,20 @@
         <div class="note" id="alignNote" hidden></div>
         <div class="chart" id="chartBox"><canvas id="cv" width="1200" height="560"></canvas><div class="tt" id="tt"></div></div>
         <div class="empty" id="empty" hidden>เลือกกองทุนทางซ้ายอย่างน้อย 1 กอง</div>
-        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มวันเดียวกัน" จะเริ่มนับจากวันที่ทุกกองมี NAV ครบ · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสีเส้น</div>
+        <div class="tip">ทุกเส้นเริ่มที่ 0% ณ วันแรกของช่วงที่เลือก ถ้าติ๊ก "ทุกเส้นเริ่มและจบวันเดียวกัน" ทุกเส้นจะเทียบช่วงเดียวกัน · คลิกช่องสีหน้าชื่อกองเพื่อเปลี่ยนสี</div>
+      </div>
+
+      <div class="card barcard" id="barCard">
+        <div class="head">
+          <div><h3 class="cardtitle">ผลตอบแทนรายปี</h3>
+            <label class="chk"><input type="checkbox" id="showPeer" checked> แสดงค่าเฉลี่ยกลุ่ม Short Term General Bond (AIMC)</label></div>
+          <div class="actions">
+            <button class="btn primary" id="copyBar">Copy รูป</button>
+            <button class="btn ghost" id="dlBar">ดาวน์โหลด PNG</button>
+          </div>
+        </div>
+        <div class="chart"><canvas id="cv2" width="1200" height="560"></canvas></div>
+        <div class="tip">ผลตอบแทนแต่ละปีปฏิทิน (สิ้นปีก่อน → สิ้นปี) ปีล่าสุดเป็น YTD · ใช้สี หัวกราฟ และภาษาเดียวกับกราฟด้านบน</div>
       </div>
 
       <h3>ผลตอบแทน <small id="tblNote"></small></h3>
@@ -309,6 +324,7 @@
 
 <div id="report">
   <div class="page"><img id="rImg" alt=""><div class="foot" id="rFoot1"></div></div>
+  <div class="page"><img id="rBarImg" alt=""><div class="foot" id="rFootB"></div></div>
   <div class="page"><h2>เทียบกับ FIXEDSP</h2><img id="rTblImg" alt=""><div class="foot" id="rFoot2"></div></div>
 </div>
 
@@ -605,6 +621,7 @@ function applyQuick(q, silent) {
     const e = new Date(end + "T00:00:00Z"); let s;
     if (q === "ALL") s = ALLD[0];
     else if (q === "YTD") s = `${end.slice(0, 4)}-01-01`;
+    else if (!/^\d+[MY]$/.test(q)) s = ALLD[0];
     else { const n = parseInt(q), u = q.slice(-1); const t = new Date(e); if (u === "M") t.setUTCMonth(t.getUTCMonth() - n); else t.setUTCFullYear(t.getUTCFullYear() - n); s = t.toISOString().slice(0, 10); }
     range = { s: ALLD[idxOf(s)], e: end, q };
   } else {
@@ -663,7 +680,90 @@ function niceStep(span, target) {
   const raw = span / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
   return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10;
 }
-function draw(ctx, opts = {}) {
+function draw(ctx, opts = {}) { return drawLine(ctx, opts); }
+/* ---------- กราฟแท่ง: ผลตอบแทนรายปีปฏิทิน ---------- */
+const m_ytd = (a) => (a && a.ytd != null && a.ytd !== "") ? +a.ytd : null;
+const navOn = (f, iso) => { if (!f.d.length || f.d[0] > iso) return null; let lo = 0, hi = f.d.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (f.d[m] <= iso) lo = m; else hi = m - 1; } return f.v[lo]; };
+let AIMC = null;   // ค่าเฉลี่ยกลุ่มจาก docs/compare/aimc.json
+function annualModel() {
+  const fs = selected.map(byName).filter(f => f && f.d.length);
+  if (!fs.length) return null;
+  // YTD จบวันเดียวกันทุกกอง (วันล่าสุดที่ทุกกองมี NAV) ถ้าติ๊ก "เริ่มและจบวันเดียวกัน"
+  const ends = fs.map(f => f.d.at(-1));
+  const ytdEnd = $("align").checked ? ends.reduce((a, b) => a < b ? a : b) : ends.reduce((a, b) => a > b ? a : b);
+  const lastY = +ytdEnd.slice(0, 4), firstY = Math.max(2022, Math.min(...fs.map(f => +f.d[0].slice(0, 4) + 1)));
+  const years = []; for (let y = firstY; y <= lastY; y++) years.push(y);
+  const ytd = !ytdEnd.endsWith("-12-31") && ytdEnd < `${lastY}-12-28`;
+  const rows = fs.map(f => ({ f, name: f.name, color: colorOf(f.name), hi: isHero(f), vals: years.map(y => {
+    const b = navOn(f, `${y - 1}-12-31`); if (b == null) return null;
+    const endIso = y === lastY ? (($("align").checked ? ytdEnd : f.d.at(-1)) < `${y}-12-31` ? ($("align").checked ? ytdEnd : f.d.at(-1)) : `${y}-12-31`) : `${y}-12-31`;
+    const e = navOn(f, endIso); if (e == null || navOn(f, `${y - 1}-12-31`) === e && endIso === f.d[0]) return null;
+    return (e / b - 1) * 100;
+  }) }));
+  // ค่าเฉลี่ยกลุ่ม (AIMC): ปีที่จบแล้วจากรายงาน · YTD เฉพาะปีเดียวกับรายงาน
+  let peer = null;
+  if (AIMC && $("showPeer").checked) {
+    const vals = years.map(y => y === lastY ? (+AIMC.asof.slice(0, 4) === y && m_ytd(AIMC) != null ? AIMC.ytd : (AIMC.years?.[y] ?? null)) : (AIMC.years?.[y] ?? null));
+    if (vals.some(v => v != null)) { peer = { name: LANG === "en" ? AIMC.label_en : AIMC.label, color: "#d6dbe3", peer: true, vals }; rows.push(peer); }
+  }
+  return { years, ytd, ytdEnd, rows, peer };
+}
+function drawBars(ctx) {
+  const m = annualModel();
+  const INK = "#1f2937", MUTE = "#6b7280", GRID = "#e9ecf1";
+  ctx.save(); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  layout = null;
+  const showTitle = $("showTitle").checked;
+  if (showTitle && m) {
+    const end = LANG === "en" ? `${+m.ytdEnd.slice(8)} ${EN_MON[+m.ytdEnd.slice(5, 7) - 1]} ${m.ytdEnd.slice(0, 4)}` : thDate(m.ytdEnd);
+    const t0 = $("title").value.trim() || (LANG === "en" ? "Calendar-Year Returns" : "ผลตอบแทนรายปี");
+    const title = m.ytd ? `${t0} (${LANG === "en" ? "YTD to" : "YTD ถึง"} ${end})` : t0;
+    ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42);
+  }
+  if (!m) { ctx.restore(); return; }
+  const foot = m.peer ? (LANG === "en"
+      ? `*${AIMC.category} category average, AIMC Category Performance Report (Morningstar)${m.ytd ? `, YTD as of ${+AIMC.asof.slice(8)} ${EN_MON[+AIMC.asof.slice(5, 7) - 1]} ${AIMC.asof.slice(0, 4)}` : ""}`
+      : `*ค่าเฉลี่ยกลุ่มกองทุน ${AIMC.category} จาก AIMC Category Performance Report (Morningstar)${m.ytd ? ` · YTD ณ ${thDate(AIMC.asof)}` : ""}`) : "";
+  const L = 74, R = 24, T = showTitle ? 80 : 34, legendH = 40, B = 40 + legendH + (foot ? 24 : 0), pw = W - L - R, ph = H - T - B;
+  const all = m.rows.flatMap(r => r.vals).filter(v => v != null);
+  let y0 = Math.min(0, ...all), y1 = Math.max(0, ...all, 0.01);
+  const pad = (y1 - y0) * 0.12; y1 += pad; if (y0 < 0) y0 -= pad;
+  const step = niceStep(y1 - y0, 6);
+  y1 = Math.ceil(y1 / step - 1e-9) * step; y0 = y0 < 0 ? Math.floor(y0 / step + 1e-9) * step : 0;
+  const Y = (v) => T + (y1 - v) / (y1 - y0) * ph;
+  const dp = Math.max(2, (String(+step.toFixed(6)).split(".")[1] || "").length);
+  ctx.font = `15px ${FONT}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let v = y0; v <= y1 + step / 2; v += step) {
+    const y = Math.round(Y(v)) + 0.5, zero = Math.abs(v) < step / 2;
+    ctx.strokeStyle = zero ? INK : GRID; ctx.lineWidth = zero ? 1.5 : 1;
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+    ctx.fillStyle = MUTE; ctx.fillText((zero ? 0 : v).toFixed(dp) + "%", L - 10, y);
+  }
+  // แท่ง: กลุ่มละปี
+  const nG = m.years.length, nS = m.rows.length, gw = pw / nG;
+  const bw = Math.min(56, (gw * 0.72) / nS), gap = Math.min(12, bw * 0.25), groupW = nS * bw + (nS - 1) * gap;
+  m.years.forEach((yr, g) => {
+    const cx = L + gw * g + gw / 2, x0 = cx - groupW / 2;
+    m.rows.forEach((r, i) => {
+      const v = r.vals[g]; if (v == null) return;
+      const x = x0 + i * (bw + gap), ya = Y(Math.max(v, 0)), yb = Y(Math.min(v, 0));
+      ctx.fillStyle = r.color; ctx.fillRect(x, ya, bw, Math.max(1, yb - ya));
+      ctx.font = `${r.hi ? 700 : 500} 14px ${r.hi ? FONT_B : FONT}`; ctx.fillStyle = INK; ctx.textAlign = "center";
+      ctx.textBaseline = v >= 0 ? "bottom" : "top";
+      ctx.fillText(v.toFixed(2) + "%", x + bw / 2, v >= 0 ? ya - 6 : yb + 6);
+    });
+    ctx.font = `700 16px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText(yr === m.years.at(-1) && m.ytd ? `${yr} (YTD)` : String(yr), cx, T + ph + 12);
+  });
+  // legend ด้านล่าง (สี่เหลี่ยมสี + ชื่อ)
+  ctx.font = `600 16px ${FONT}`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  const items = m.rows.map(r => ({ r, w: 14 + 8 + ctx.measureText(r.name).width + 28 }));
+  let x = W / 2 - (items.reduce((a, b) => a + b.w, 0) - 28) / 2; const ly = H - 22 - (foot ? 24 : 0);
+  for (const it of items) { ctx.fillStyle = it.r.color; ctx.fillRect(x, ly - 7, 14, 14); ctx.fillStyle = INK; ctx.fillText(it.r.name, x + 22, ly + 0.5); x += it.w; }
+  if (foot) { ctx.font = `13px ${FONT}`; ctx.fillStyle = "#8a929e"; ctx.textAlign = "right"; ctx.fillText(foot, W - 24, H - 14); }
+  ctx.restore();
+}
+function drawLine(ctx, opts = {}) {
   const si = startInfo();
   const ser = selected.map(n => byName(n)).filter(Boolean).map(f => {
     const pts = slice(f); const b = pts[0]?.[1];
@@ -763,10 +863,15 @@ function draw(ctx, opts = {}) {
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
 function renderChart() {
-  const cv = $("cv"), dpr = Math.max(2, window.devicePixelRatio || 1);
-  cv.width = W * dpr; cv.height = H * dpr;
-  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  draw(ctx);
+  const dpr = Math.max(2, window.devicePixelRatio || 1);
+  for (const [id, fn] of [["cv", drawLine], ["cv2", drawBars]]) {
+    const cv = $(id); cv.width = W * dpr; cv.height = H * dpr;
+    const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); fn(ctx);
+  }
+}
+function exportBars(scale = 2) {
+  const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
+  const ctx = c.getContext("2d"); ctx.scale(scale, scale); drawBars(ctx); return c;
 }
 function exportCanvas(scale = 2) {
   const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
@@ -1086,12 +1191,23 @@ $("print").onclick = () => {
   // หน้า 1 = กราฟ · หน้า 2 = ตารางเทียบ FIXEDSP (รูปเดียวกับปุ่ม Copy เป็นรูป)
   $("rImg").src = exportCanvas(3).toDataURL("image/png");
   $("rTblImg").src = tableCanvas(modelT1(), 3).toDataURL("image/png");
+  $("rBarImg").src = exportBars(3).toDataURL("image/png");
   $("rFoot1").textContent = $("rFoot2").textContent = `ข้อมูล ณ วันที่ ${thDate(startInfo().e)}`;
+  const am = annualModel(); $("rFootB").textContent = am ? `ข้อมูล ณ วันที่ ${thDate(am.ytdEnd)}` : "";
   const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
-  Promise.all(["rImg", "rTblImg"].map(id => $(id).decode().catch(() => {})))
+  Promise.all(["rImg", "rBarImg", "rTblImg"].map(id => $(id).decode().catch(() => {})))
     .then(() => setTimeout(() => { window.print(); document.title = old; }, 50));
 };
 $("copyT1").onclick = () => copyModel(modelT1());
+$("copyBar").onclick = async () => {
+  try { await navigator.clipboard.write([new ClipboardItem({ "image/png": toBlob(exportBars(2)) })]); toast("Copy กราฟแท่งแล้ว ไปวางใน PowerPoint ได้เลย"); }
+  catch (e) { toast("เบราว์เซอร์นี้ copy รูปไม่ได้ ใช้ดาวน์โหลด PNG แทน"); }
+};
+$("dlBar").onclick = async () => {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await toBlob(exportBars(2))); a.download = fileName("png").replace(/\.png$/, "_รายปี.png"); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+$("showPeer").onchange = renderChart;
 $("copyT1img").onclick = () => copyTableImage(modelT1());
 $("dlT1img").onclick = async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(await tablePng(modelT1()));
@@ -1158,12 +1274,13 @@ function update() {
     const r = await fetch("compare/data.json?v=" + Date.now());
     if (!r.ok) throw new Error(r.status);
     DATA = await r.json();
+    try { const ra = await fetch("compare/aimc.json?v=" + Date.now()); if (ra.ok) AIMC = await ra.json(); } catch (e) {}
     for (const f of DATA.funds) if (!f.d) {
       const d = [], t0 = f.s ? dnum(f.s) : 0;
       if (f.s) { let t = t0; d.push(f.s); for (const k of f.dd || []) { t += k; d.push(isoOf(t)); } }
       f.d = d; delete f.dd;
     }
-    $("asof").textContent = `NAV ถึง ${thDate(DATA.nav_to || DATA.updated)} · ย้อนหลัง ${DATA.years} ปี`;
+    $("asof").textContent = `NAV ถึง ${thDate(DATA.nav_to || DATA.updated)} · ` + (DATA.start ? `ตั้งแต่ ${DATA.start.slice(0, 4) === "2021" ? "ม.ค. 65" : thDate(DATA.start)}` : `ย้อนหลัง ${DATA.years} ปี`);
   } catch (e) {
     $("asof").textContent = "ยังไม่มีข้อมูล";
     $("notice").hidden = false;

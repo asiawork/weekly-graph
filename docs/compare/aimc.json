@@ -1,0 +1,9 @@
+{
+  "_note": "ค่าเฉลี่ยกลุ่มจาก AIMC Category Performance Report (Morningstar) อัปเดตเดือนละครั้ง: แก้ asof และ ytd (และเพิ่มปีที่จบแล้วใน years)",
+  "category": "Short Term General Bond",
+  "label": "ค่าเฉลี่ยกลุ่ม*",
+  "label_en": "Peer average*",
+  "asof": "2026-07-31",
+  "years": { "2021": 0.42, "2022": 0.55, "2023": 1.53, "2024": 2.11, "2025": 1.93 },
+  "ytd": 0.60
+}

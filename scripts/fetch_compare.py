@@ -28,7 +28,9 @@ import fetch_nav as fn  # noqa: E402
 ROOT = fn.ROOT
 DATA = ROOT / "data" / "compare"
 OUT = ROOT / "docs" / "compare"
-YEARS = int(os.getenv("COMPARE_YEARS", "3"))
+YEARS = int(os.getenv("COMPARE_YEARS", "3"))   # ไม่ใช้แล้ว (เก็บไว้ให้โค้ดเก่าอ่านได้)
+# ดึง NAV ตั้งแต่ปลายปี 2021: ผลตอบแทนปี 2022 ต้องใช้ NAV วันทำการสุดท้ายของปี 2021 เป็นฐาน
+START = date.fromisoformat(os.getenv("COMPARE_START", "2021-12-01"))
 # เพิ่มกองความเสี่ยงระดับ 1–2 (กองตลาดเงิน) ทุกกองให้อัตโนมัติ จาก /v2/fund/factsheet/risk-spectrum
 AUTO_MM = os.getenv("AUTO_MONEY_MARKET", "1") == "1"
 MM_LEVELS = {int(x) for x in os.getenv("RISK_LEVELS", "1,2,3,4").split(",") if x.strip()}
@@ -339,6 +341,7 @@ def write_payload(out_funds, today, missing):
         "nav_to": max(last_days).isoformat() if last_days else None,
         "run_at": datetime.utcnow().isoformat() + "Z",
         "years": YEARS,
+        "start": START.isoformat(),
         "funds": out_funds,
         "missing": missing,
     }
@@ -349,11 +352,34 @@ def write_payload(out_funds, today, missing):
         raise SystemExit("ดึง NAV ไม่ได้เลยสักกอง - ลองรันแบบ selftest เพื่อดู response")
 
 
+# กองที่เคยดึงย้อนไปถึงวันเริ่มแล้ว {ชื่อ: วันเริ่ม} กองที่เพิ่งเปิด (NAV วันแรกหลังวันเริ่ม)
+# จะได้ไม่ต้องดึงย้อนไปปี 2021 ใหม่ทุกวัน
+BACKFILL_PATH = DATA / "backfill.json"
+BACKFILL = json.loads(BACKFILL_PATH.read_text()) if BACKFILL_PATH.exists() else {}
+
+
+def fetch_nav(info, start, today):
+    """ดึง NAV: รอบแรกดึงตั้งแต่ start · รอบต่อไปดึงเฉพาะวันใหม่ (รวมกองที่เปิดหลัง start)"""
+    name = info["name"]
+    series = fn.read_cache(fn.NAV_DIR / f"{fn.slug(name)}.csv")
+    frm = start
+    if series and BACKFILL.get(name, "9999") <= start.isoformat():
+        frm = max(start, min(series))
+    _, warn = fn.fetch_series(info, frm, today)
+    BACKFILL[name] = start.isoformat()
+    return warn
+
+
+def save_backfill(names):
+    keep = {k: v for k, v in BACKFILL.items() if k in names}
+    BACKFILL_PATH.write_text(json.dumps(keep, ensure_ascii=False, indent=0, sort_keys=True))
+
+
 def nav_series(info, start, today):
     """ดึง NAV เพิ่ม (เฉพาะวันใหม่) แล้วคืน (วันที่เรียงแล้ว, series, warning)"""
     warn = None
     try:
-        _, warn = fn.fetch_series(info, start, today)
+        warn = fetch_nav(info, start, today)
     except Exception as e:  # noqa: BLE001
         warn = str(e)[:300]
         print(f"  ! {e}")
@@ -387,6 +413,7 @@ def run_nav_only(prev, today, start):
         out.append({**{kk: vv for kk, vv in f.items() if kk not in ("s", "dd", "v", "x", "warning")},
                     "x": x, "warning": warn, **packed})
     print(f"โหมดรายวัน: อัปเดต NAV {len(out)} กอง")
+    save_backfill({f["info"]["name"] for f in prev["funds"]})
     write_payload(out, today, prev.get("missing") or {})
 
 
@@ -395,7 +422,7 @@ def main():
         raise SystemExit("ไม่พบ SEC_API_KEY (ตั้งใน GitHub → Settings → Secrets → Actions)")
     selftest = "--selftest" in sys.argv
     today = datetime.now(timezone(timedelta(hours=7))).date()   # เวลาไทย
-    start = today - timedelta(days=round(365.25 * YEARS) + 7)
+    start = START
     # full = ดึงรายชื่อกอง + ข้อมูลในตารางใหม่ทั้งหมด · nav = ดึงแค่ NAV
     # full เดือนละ 2 ครั้ง: วันจันทร์แรกของเดือน (factsheet เดือนก่อนเริ่มทยอยเข้า) และวันจันทร์ที่สาม (เก็บฉบับที่ส่งช้า + กองใหม่)
     first_or_third_monday = today.weekday() == 0 and (today.day <= 7 or 15 <= today.day <= 21)
@@ -516,19 +543,20 @@ def main():
         print(f"NAV {f['name']} ({info['proj_id']} {info['fund_class_name'] or 'main'}) ...")
         warn = None
         try:
-            _, warn = fn.fetch_series(info, start, today)
+            warn = fetch_nav(info, start, today)
         except Exception as e:  # noqa: BLE001
             warn = str(e)[:300]
             print(f"  ! {e}")
         cache = fn.NAV_DIR / f"{fn.slug(info['name'])}.csv"
         series = fn.read_cache(cache)
-        if info["name"] in notes:                # เคยลองแล้ว (สำเร็จ = ข้อความ, ไม่มีให้ต่อ = null)
-            stitched = notes[info["name"]]
+        nt = notes.get(info["name"])
+        if isinstance(nt, dict) and nt.get("s", "9999") <= start.isoformat():   # เคยลองแล้วด้วยวันเริ่มนี้
+            stitched = nt.get("n")
         else:
             series, stitched = stitch_old_class(info, start, series)
             if stitched:
                 fn.write_cache(cache, series)   # รอบหน้าดึงเฉพาะวันใหม่
-            notes[info["name"]] = stitched
+            notes[info["name"]] = {"n": stitched, "s": start.isoformat()}
         series = {d: v for d, v in series.items() if d >= start}
         days = sorted(series)
         # กอง/class ที่เพิ่งเปิด: ช่วงก่อนเปิดไม่มี NAV ของ class นี้ ไม่นับเป็นปัญหาถ้าได้ข้อมูลมาแล้ว
@@ -567,7 +595,7 @@ def main():
     notes = {k: v for k, v in notes.items() if any(x["name"] == k for x in out_funds)}
     print(f"ลบ NAV ของกองที่ไม่ใช้แล้ว {removed} ไฟล์")
     notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
-    notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
+    save_backfill({x["name"] for x in out_funds})
     write_payload(out_funds, today, missing)
 
 
