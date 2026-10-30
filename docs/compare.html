@@ -137,9 +137,13 @@
   tr.perf th, tr.perf td { border-top: 3px solid var(--line); }
   td.num { white-space: nowrap; }
   .pos { color: var(--pos); } .neg { color: var(--neg); }
-  .titlebox { display: flex; flex-direction: column; gap: 8px; flex: 1 1 300px; min-width: 0; }
-  .titleopts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
-  .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .head { align-items: flex-start; }
+  .titlebox { display: flex; flex-direction: column; gap: 8px; flex: 1 1 320px; min-width: 0; }
+  .titlebox input { flex: none; width: 100%; }
+  .titleopts { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .optlabel { white-space: nowrap; margin-left: 6px; }
+  .seg.sm button { padding: 4px 12px; font-size: 12.5px; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; color: var(--ink); }
   .chk input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
   .src { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
   .dt tbody td { min-width: 150px; }
@@ -234,7 +238,8 @@
             <input id="title" placeholder="หัวกราฟ (ไม่ใส่ = เปรียบเทียบผลตอบแทน)" aria-label="หัวกราฟ">
             <div class="titleopts">
               <label class="chk"><input type="checkbox" id="showTitle" checked> แสดงหัวกราฟ</label>
-              <div class="seg" id="lang" role="group" aria-label="ภาษาในกราฟและตาราง"><button data-l="th">ไทย</button><button data-l="en">EN</button></div>
+              <span class="optlabel">ภาษาในกราฟ</span>
+              <div class="seg sm" id="lang" role="group" aria-label="ภาษาในกราฟ"><button data-l="th">ไทย</button><button data-l="en">EN</button></div>
             </div>
           </div>
           <div class="actions">
@@ -290,33 +295,12 @@ const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5
 const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const EN_MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-/* ภาษาในกราฟ ตารางผลตอบแทน และตารางเทียบ FIXEDSP (หน้าเว็บยังเป็นภาษาไทย) */
+/* ภาษาในกราฟ (หัวกราฟ เดือนบนแกน) — ตารางและหน้าเว็บเป็นภาษาไทย */
 let LANG = "th";
-const EN = {
-  "กองทุน": "Fund", "เปรียบเทียบผลตอบแทน": "Return comparison",
-  "ผลตอบแทนช่วงที่เลือก": "Return (selected period)", "ผลตอบแทนต่อปี": "Annualized return", "ลดลงสูงสุดจากจุดสูงสุด": "Max drawdown",
-  "บลจ.": "Asset management company", "นโยบายค่าเงิน": "FX hedging policy",
-  "สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน": "Eligible investments\n(government / corporate)",
-  "อายุเฉลี่ยของตราสาร": "Average portfolio duration", "อัตราผลตอบแทนที่คาดหวัง 1 ปี": "Expected 1-year return",
-  "ระยะเวลาที่ควรถือลงทุน": "Recommended holding period", "ค่าธรรมเนียมขาย (Front-End Fee)": "Front-end fee",
-  "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "Management fee + other expenses", "ระยะเวลารับเงินค่าขายคืน": "Redemption settlement",
-  "ทีมผู้เชี่ยวชาญดูแล": "Managed by expert team",
-  "ป้องกันทั้งหมด/เกือบทั้งหมด": "Fully / mostly hedged", "ป้องกันบางส่วน": "Partially hedged",
-  "ขึ้นอยู่กับดุลยพินิจของผู้จัดการกองทุน": "At fund manager's discretion", "ไม่ป้องกัน": "Unhedged", "ไม่มีความเสี่ยงค่าเงิน": "No FX risk",
-  "สามารถลงทุนในตราสารภาครัฐ": "Government debt only", "สามารถลงทุนได้ทั้งตราสารภาครัฐ และเอกชน": "Government and corporate debt",
-  "ไม่มี": "None", "ปัจจุบันไม่เรียกเก็บ": "Currently waived", "ตั้งแต่ 1 สัปดาห์ขึ้นไป": "1 week or longer",
-  "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล": "Actively rebalanced by an expert team",
-};
-const tr = (t) => {
-  if (LANG !== "en" || t == null || t === "") return t;
-  if (EN[t] != null) return EN[t];
-  return String(t).replace(/(\d+)\s*เดือน/g, (_, n) => `${n} month${+n > 1 ? "s" : ""}`).replace(/(\d+)\s*วัน/g, (_, n) => `${n} day${+n > 1 ? "s" : ""}`)
-    .replace(/ตั้งแต่\s*(\d+)\s*(month|day|week)s?\s*ขึ้นไป/, (_, n, u) => `${n} ${u}${+n > 1 ? "s" : ""} or longer`).trim();
-};
+const EN = { "เปรียบเทียบผลตอบแทน": "Cumulative Return" };
+const tr = (t) => LANG === "en" && EN[t] != null ? EN[t] : t;
 const monLabel = (iso) => { const [y, m] = iso.split("-"); return LANG === "en" ? `${EN_MON[+m - 1]} ${y.slice(2)}` : `${TH_MON[+m - 1]} ${(+y + 543) % 100}`; };
 const dayLabel = (iso) => { const [, m, d] = iso.split("-"); return LANG === "en" ? `${+d} ${EN_MON[+m - 1]}` : `${+d} ${TH_MON[+m - 1]}`; };
-const amcShortEn = (s) => String(s || "").replace(/\s*(ASSET|FUND)\s+MANAGEMENT.*$/i, "").replace(/\s*(PUBLIC\s+)?COMPANY\s+LIMITED.*$/i, "")
-  .toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()).trim();
 const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
 const W = 1200, H = 560;
 const FONT = '"BLSBody", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
@@ -661,7 +645,9 @@ function draw(ctx, opts = {}) {
   // หัวกราฟ: ชื่อ + ช่วงเดือน (ซ่อนได้)
   const showTitle = $("showTitle").checked;
   if (showTitle) {
-    const span = monLabel(si.s) === monLabel(si.e) ? monLabel(si.s) : `${monLabel(si.s)} – ${monLabel(si.e)}`;
+    // ภาษาอังกฤษใช้ปีเต็มในหัวกราฟ ("Jan 26" อ่านเป็นวันที่ 26 ได้)
+    const ml = (iso) => LANG === "en" ? `${EN_MON[+iso.slice(5, 7) - 1]} ${iso.slice(0, 4)}` : monLabel(iso);
+    const span = ml(si.s) === ml(si.e) ? ml(si.s) : `${ml(si.s)} – ${ml(si.e)}`;
     const title = `${$("title").value.trim() || tr("เปรียบเทียบผลตอบแทน")}, ${span}`;
     ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     ctx.fillText(title, 24, 42);
@@ -825,7 +811,7 @@ function renderInfos() {
 $("infos").addEventListener("click", (e) => { const p = e.target.closest(".pol"); if (p) p.classList.toggle("open"); });
 function renderPerf() {
   const fs = selected.map(byName).filter(Boolean);
-  $("perf").innerHTML = !fs.length ? "" : `<thead><tr>${["กองทุน", "ผลตอบแทนช่วงที่เลือก", "ผลตอบแทนต่อปี", "ลดลงสูงสุดจากจุดสูงสุด"].map(h => `<th>${tr(h)}</th>`).join("")}</tr></thead><tbody>` +
+  $("perf").innerHTML = !fs.length ? "" : `<thead><tr><th>กองทุน</th><th>ผลตอบแทนช่วงที่เลือก</th><th>ผลตอบแทนต่อปี</th><th>ลดลงสูงสุดจากจุดสูงสุด</th></tr></thead><tbody>` +
     fs.map(f => { const s = stats(slice(f)); const c = (v, t) => `<td class="${cls(v)}">${t}</td>`;
       return `<tr><td><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}${ipoTag(f)}</td>` +
         (s ? c(s.ret, pct(s.ret)) + (s.ann != null ? c(s.ann, pct(s.ann)) : "<td>–</td>") + `<td class="${s.mdd < -0.005 ? "neg" : ""}">${s.mdd > -0.005 ? "0.00%" : pct(s.mdd)}</td>` : "<td>–</td><td>–</td><td>–</td>") +
@@ -905,7 +891,7 @@ function fxShort(f) {
 function secCell(f, label) {
   if (!f || f.custom) return "";
   switch (keyOf(label)) {
-    case keyOf("บลจ."): return LANG === "en" && f.sec?.comp_name_en ? amcShortEn(f.sec.comp_name_en) : amcShort(f.sec?.comp_name_th || f.info?.comp_name_th);
+    case keyOf("บลจ."): return amcShort(f.sec?.comp_name_th || f.info?.comp_name_th);
     case keyOf("นโยบายค่าเงิน"): return fxShort(f);
     case keyOf("ความเสี่ยง"): return f.risk ? String(f.risk) : "";
     case keyOf("สัดส่วนการลงทุนทั้งในและต่างประเทศ"): return COUNTRY[String(f.sec?.invest_country_flag || "")] || "";
@@ -942,11 +928,11 @@ const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyO
 function modelT1() {
   const others = selected.map(byName).filter(f => f && !isHero(f));
   const cols = [...others.map(f => ({ name: f.name, f })), { name: "FIXEDSP", f: null }];
-  return { cols, rows: ROWS_T1.map(l => [tr(l), cols.map(c => tr(cellFor(c.name, c.f, l)))]) };
+  return { cols, rows: ROWS_T1.map(l => [l, cols.map(c => cellFor(c.name, c.f, l))]) };
 }
 function tableHTML({ cols, rows }) {
   const lab = (l) => esc(l).replace(/\n/g, "<br>");
-  return `<thead><tr><th>${tr("กองทุน")}</th>${cols.map(c => `<th>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
+  return `<thead><tr><th>กองทุน</th>${cols.map(c => `<th>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
     `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
 }
 function renderTable() {
@@ -960,14 +946,14 @@ const SLIDE_T = { w: 878, h: 398, labelW: 340, headSize: 14, bodySize: 12 };
 const NAVY = "#1b3560", LINE = "#1f2a44";
 async function copyModel(m) {
   const txt = (v) => v || "";
-  const tsv = [[tr("กองทุน"), ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
+  const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
   const n = m.cols.length, colW = Math.floor((SLIDE_T.w - SLIDE_T.labelW) / Math.max(n, 1)), rowH = Math.floor(SLIDE_T.h / (m.rows.length + 1));
   const base = `border:1px solid ${LINE};padding:2pt 6pt;text-align:center;vertical-align:middle;height:${rowH}pt;`;
   const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;border-color:#fff ${LINE};`;
   const head = base + `width:${colW}pt;background:#fff;color:${NAVY};font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;`;
   const td = base + `width:${colW}pt;background:#fff;color:${NAVY};font-family:'BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.bodySize}pt;`;
   const html = `<table style="border-collapse:collapse;width:${SLIDE_T.w}pt"><colgroup><col style="width:${SLIDE_T.labelW}pt">${m.cols.map(() => `<col style="width:${colW}pt">`).join("")}</colgroup>` +
-    `<tr><td style="${lab}">${tr("กองทุน")}</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
+    `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
     m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
@@ -979,7 +965,7 @@ function tableCanvas(m, scale = 3) {
   const W2 = SLIDE_T.w, H2 = SLIDE_T.h, n = Math.max(m.cols.length, 1);
   const c = document.createElement("canvas"); c.width = W2 * scale; c.height = H2 * scale;
   const ctx = c.getContext("2d"); ctx.scale(scale, scale);
-  const rows = [[tr("กองทุน"), m.cols.map(c => c.name), true], ...m.rows.map(([l, vs]) => [l, vs, false])];
+  const rows = [["กองทุน", m.cols.map(c => c.name), true], ...m.rows.map(([l, vs]) => [l, vs, false])];
   // แถวที่หัวข้อ 2 บรรทัดสูงกว่าแถวอื่น (เหมือนในสไลด์)
   const wts = rows.map(([l]) => String(l).includes("\n") ? 1.6 : 1), unit = H2 / wts.reduce((a, b) => a + b, 0);
   const ys = wts.reduce((a, w) => (a.push(a.at(-1) + w * unit), a), [0]);
