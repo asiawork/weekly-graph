@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "update = NAV อย่างเดียว (วันจันทร์ดึงข้อมูลตารางด้วย) / full = ดึงรายชื่อกอง + ข้อมูลตาราง + หนังสือชี้ชวนใหม่ทั้งหมด / selftest = พิมพ์ profile ดิบของ SEC ออกมาดู (ไม่บันทึก)"
+        description: "update = NAV อย่างเดียว (วันจันทร์แรก/ที่สามของเดือนดึงข้อมูลตารางด้วย) / full = ดึงรายชื่อกอง + ข้อมูลตาราง + หนังสือชี้ชวนใหม่ทั้งหมด / selftest = พิมพ์ profile ดิบของ SEC ออกมาดู (ไม่บันทึก)"
         type: choice
         options: [update, full, selftest]
         default: update

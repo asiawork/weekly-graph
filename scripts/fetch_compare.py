@@ -396,8 +396,10 @@ def main():
     selftest = "--selftest" in sys.argv
     today = datetime.now(timezone(timedelta(hours=7))).date()   # เวลาไทย
     start = today - timedelta(days=round(365.25 * YEARS) + 7)
-    # full = ดึงรายชื่อกอง + ข้อมูลในตารางใหม่ทั้งหมด (วันจันทร์) · nav = ดึงแค่ NAV (วันอื่น)
-    mode = os.getenv("COMPARE_MODE", "").strip().lower() or ("full" if today.weekday() == 0 else "nav")
+    # full = ดึงรายชื่อกอง + ข้อมูลในตารางใหม่ทั้งหมด · nav = ดึงแค่ NAV
+    # full เดือนละ 2 ครั้ง: วันจันทร์แรกของเดือน (factsheet เดือนก่อนเริ่มทยอยเข้า) และวันจันทร์ที่สาม (เก็บฉบับที่ส่งช้า + กองใหม่)
+    first_or_third_monday = today.weekday() == 0 and (today.day <= 7 or 15 <= today.day <= 21)
+    mode = os.getenv("COMPARE_MODE", "").strip().lower() or ("full" if first_or_third_monday else "nav")
     prev_path = OUT / "data.json"
     prev = json.loads(prev_path.read_text()) if prev_path.exists() else None
     if mode == "nav" and not selftest and prev and prev.get("funds"):
