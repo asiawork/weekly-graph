@@ -811,8 +811,10 @@ function feeOf(f, test) {
   const k = Object.keys(fees).find(test); if (!k) return "";
   const e = fees[k], a = e.actual ?? e.rate;
   if (a == null || a === "") return e.other || "";
-  const s = String(a).trim();
-  return /^0+(\.0+)?$/.test(s) ? "ปัจจุบันไม่เรียกเก็บ" : numPct(s);
+  const s = String(a).trim(), zero = (v) => v == null || v === "" || /^0+(\.0+)?$/.test(String(v).trim());
+  if (!zero(s)) return numPct(s);
+  // เก็บจริง 0: ถ้าหนังสือชี้ชวนกำหนดอัตราไว้ (เรียกเก็บได้แต่ยกเว้นอยู่) = ปัจจุบันไม่เรียกเก็บ · ถ้าอัตราเป็น 0 ด้วย = ไม่มี
+  return zero(e.rate) ? "ไม่มี" : "ปัจจุบันไม่เรียกเก็บ";
 }
 function redempOf(f) {
   const rs = f?.x?.redemp || []; if (!rs.length) return "";
