@@ -824,6 +824,7 @@ function secCell(f, label) {
     case keyOf("สัดส่วนการลงทุนทั้งในและต่างประเทศ"): return COUNTRY[String(f.sec?.invest_country_flag || "")] || "";
     case keyOf("อายุเฉลี่ยของตราสาร"): return durText(f.x?.duration);
     case keyOf("Yield to Maturity"): return numPct(f.x?.ytm);
+    case keyOf("อัตราผลตอบแทนที่คาดหวัง 1 ปี"): return numPct(f.x?.ytm);   // ใช้ YTM จาก factsheet/statistics
     case keyOf("ค่าธรรมเนียมขาย (Front-End Fee)"): return feeOf(f, k => /ขาย|front/i.test(k) && !/ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch/i.test(k));
     case keyOf("ค่าธรรมเนียมการจัดการ + อื่น ๆ"): return feeOf(f, k => /รวม|total/i.test(k) && /ค่าใช้จ่าย|ค่าธรรมเนียม|expense/i.test(k)) || feeOf(f, k => /การจัดการ|management/i.test(k));
     case keyOf("ระยะเวลารับเงินค่าขายคืน"): return redempOf(f);
