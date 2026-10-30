@@ -1,177 +1,702 @@
 {
- "K-CASH-A": "ก่อน 2025-12-11 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
- "KTSV-A": "ก่อน 2025-06-26 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
- "K-ESGSI-A": "ก่อน 2025-07-02 ใช้ NAV ของ class K-ESGSI-ThaiESG (class นี้เริ่มวันนั้น)",
- "K-SFPLUS-A": "ก่อน 2025-04-16 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
- "SMARTA": "ก่อน 2025-09-24 ใช้ NAV ของ class SMARTMF (class นี้เริ่มวันนั้น)",
- "ASP-DGOV-R": null,
- "B-TREASURY": null,
- "BCAP-MONEY": null,
- "ES-CASH": null,
- "ES-MF": null,
- "ES-TM": null,
- "KFCASH-A": null,
- "KKP MP": null,
- "KTSS": null,
- "LHTREASURY-A": null,
- "MMGOVMF": null,
- "PCASH": null,
- "SCBMONEY(A)": null,
- "SCBTMF": null,
- "SCBTMFPLUS-A": null,
- "TCMF": null,
- "TCMFENJOY": null,
- "TISCOSTF": null,
- "TLMMF-A": null,
- "UOBSD": null,
- "X-DAILY": null,
- "1AM-DAILY-RA": null,
- "DAOL-MONEY-R": null,
- "FP MONEY": null,
- "K-MONEY": null,
- "KFCASHPLUS": null,
- "KKP CASH": null,
- "LHMM-A": null,
- "PRINCIPAL TREASURY": null,
- "1AM-TG": null,
- "ABFTH": null,
- "K-TREASURY": null,
- "MGOV-Roll3M": null,
- "MGOV-Roll6M": null,
- "MGOV-Roll6M3": null,
- "TBOND1Y": null,
- "TLUSGOV": null,
- "TUSFIX": null,
- "TUSTREASURY": null,
- "UTSB-D": null,
- "UTSB-N": null,
- "1GLOBALBOND": null,
- "ABGFIX-A": null,
- "ABGFIX-D": null,
- "AIA-DFI": null,
- "AIA-IC": null,
- "AIA-ST": null,
- "ASP": null,
- "ASP-ACTFIX": null,
- "ASP-SDAILY": null,
- "ASP-USDL": null,
- "B-DYNAMIC BOND": null,
- "B-ENHANCED": null,
- "B-ST": null,
- "B-STPLUS": null,
- "B-TNTV": null,
- "BCAP-DHSL": null,
- "BCAP-GFIO": null,
- "BCAP-MFIX": null,
- "BCAP-USL": null,
- "BFIXED": null,
- "DAOL-TRBOND-A": null,
- "DAOL-TRBOND-D": null,
- "ES-APLUS": null,
- "ES-GF-A": null,
- "ES-GF-D": null,
- "ES-GLOBALFI": null,
- "ES-IPLUS": null,
- "ES-SPlus": null,
- "ES-TSARN": null,
- "ES-TSB": null,
- "ES-USDPRIME": null,
- "FP IGFIXED-A": null,
- "K-AB22B": null,
- "K-CBOND-A": null,
- "K-ESGBF-A": null,
- "K-FIXED-A": null,
- "K-FIXEDPLUS-A": null,
- "K-FIXEDPRO": null,
- "K-GB-A(D)": null,
- "K-GSF(UH)": null,
- "K-GSF(USD)": null,
- "K-PLAN1": null,
- "K-SF-A": null,
- "K-SFIXED": null,
- "KFAFIX-A": null,
- "KFENFIX": null,
- "KFMTFI": null,
- "KFMTFI-D": null,
- "KFSMART-A": null,
- "KFSPLUS-A": null,
- "KFTRB-A": null,
- "KKP AAA CLO-USD": null,
- "KKP ACT FIXED": null,
- "KKP PLUS": null,
- "KKP S-PLUS": null,
- "KT-ARB-A": null,
- "KT-ARB-D": null,
- "KT-BOND": null,
- "KT-ST": null,
- "KT-WCORP": null,
- "KTFIX-1Y3Y": null,
- "KTFIX3M1": null,
- "KTFIX3M3": null,
- "KTFIXPLUS-A": null,
- "KTFIXPLUS-D": null,
- "KTILF": null,
- "KTPLUS": null,
- "KTSIV3M1": null,
- "KTSIV3M2": null,
- "KTSIV6M1": null,
- "KTSIV6M2": null,
- "KTSTPLUS-A": null,
- "KTSTPLUS-D": null,
- "LHDEBT-A": null,
- "LHDEBT-D": null,
- "LHGIGO-A": null,
- "LHGIGO-D": null,
- "LHSTPLUS-A": null,
- "MFF": null,
- "MMM-MF": null,
- "MMM-PLUS": null,
- "MUBOND-A": null,
- "MUBOND-D": null,
- "MUBONDUH-A": null,
- "MUBONDUH-D": null,
- "ONE-DI": null,
- "ONE-FAR": null,
- "ONE-FFI": null,
- "ONE-FIXED-A": null,
- "PRINCIPAL DPLUS-A": null,
- "PRINCIPAL iDAILY-A": null,
- "PRINCIPAL iDAILY-D": null,
- "PRINCIPAL iFIXED-A": null,
- "PRINCIPAL iFIXED-D": null,
- "SCBAUD": null,
- "SCBAUDD": null,
- "SCBDBOND(A)": null,
- "SCBDLITE(A)": null,
- "SCBEMBOND": null,
- "SCBEMBOND(A)": null,
- "SCBFIXEDA": null,
- "SCBFIXEDD": null,
- "SCBFP": null,
- "SCBFPD": null,
- "SCBFST": null,
- "SCBFSTD": null,
- "SCBGLOB": null,
- "SCBGLOB(D)": null,
- "SCBGOFIX(A)": null,
- "SCBRF": null,
- "SCBSFF": null,
- "SCBSFFPLUS(IN)": null,
- "SCBTB(A)": null,
- "SCBTB(D)": null,
- "SCBUSDYIELD": null,
- "TFIF": null,
- "TISCOFIX-A": null,
- "TLA-GFIX": null,
- "TUSBOND-A": null,
- "UDAILY": null,
- "UFFF": null,
- "UIDPLUS": null,
- "UOBID": null,
- "UQI-N": null,
- "USDAILY": null,
- "USDREADY": null,
- "X-EMBOND": null,
- "X-Plus": null,
- "tsp1-preserver": null
+ "K-CASH-A": {
+  "n": "ก่อน 2023-10-24 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
+  "s": "2021-12-01"
+ },
+ "KTSV-A": {
+  "n": "ก่อน 2023-10-24 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
+  "s": "2021-12-01"
+ },
+ "K-ESGSI-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-SFPLUS-A": {
+  "n": "ก่อน 2023-10-24 ใช้ NAV ของ class main (class นี้เริ่มวันนั้น)",
+  "s": "2021-12-01"
+ },
+ "SMARTA": {
+  "n": "ก่อน 2023-10-24 ใช้ NAV ของ class SMARTMF (class นี้เริ่มวันนั้น)",
+  "s": "2021-12-01"
+ },
+ "ASP-DGOV-R": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "B-TREASURY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "BCAP-MONEY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-CASH": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-MF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-TM": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFCASH-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KKP MP": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHTREASURY-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MMGOVMF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PCASH": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBMONEY(A)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBTMF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBTMFPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TCMF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TCMFENJOY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TISCOSTF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TLMMF-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UOBSD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "X-DAILY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "1AM-DAILY-RA": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "DAOL-MONEY-R": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "FP MONEY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-MONEY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFCASHPLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KKP CASH": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHMM-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PRINCIPAL TREASURY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "1AM-TG": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ABFTH": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-TREASURY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MGOV-Roll3M": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MGOV-Roll6M": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MGOV-Roll6M3": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TBOND1Y": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TLUSGOV": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TUSFIX": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TUSTREASURY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UTSB-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UTSB-N": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "1GLOBALBOND": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ABGFIX-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ABGFIX-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "AIA-DFI": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "AIA-IC": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "AIA-ST": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ASP": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ASP-ACTFIX": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ASP-SDAILY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ASP-USDL": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "B-DYNAMIC BOND": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "B-ENHANCED": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "B-ST": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "B-STPLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "B-TNTV": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "BCAP-DHSL": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "BCAP-GFIO": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "BCAP-MFIX": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "BCAP-USL": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "BFIXED": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "DAOL-TRBOND-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "DAOL-TRBOND-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-APLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-GF-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-GF-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-GLOBALFI": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-IPLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-SPlus": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-TSARN": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-TSB": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ES-USDPRIME": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "FP IGFIXED-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-AB22B": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-CBOND-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-ESGBF-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-FIXED-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-FIXEDPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-FIXEDPRO": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-GB-A(D)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-GSF(UH)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-GSF(USD)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-PLAN1": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-SF-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "K-SFIXED": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFAFIX-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFENFIX": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFMTFI": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFMTFI-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFSMART-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFSPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KFTRB-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KKP AAA CLO-USD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KKP ACT FIXED": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KKP PLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KKP S-PLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KT-ARB-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KT-ARB-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KT-BOND": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KT-ST": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KT-WCORP": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTFIX-1Y3Y": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTFIX3M1": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTFIX3M3": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTFIXPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTFIXPLUS-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTILF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTPLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSIV3M1": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSIV3M2": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSIV6M1": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSIV6M2": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSTPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "KTSTPLUS-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHDEBT-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHDEBT-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHGIGO-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHGIGO-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "LHSTPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MFF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MMM-MF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MMM-PLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MUBOND-A": {
+  "n": "ก่อน 2023-03-01 ใช้ NAV ของ class MUBOND-D (class นี้เริ่มวันนั้น)",
+  "s": "2021-12-01"
+ },
+ "MUBOND-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MUBONDUH-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "MUBONDUH-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ONE-DI": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ONE-FAR": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ONE-FFI": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "ONE-FIXED-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PRINCIPAL DPLUS-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PRINCIPAL iDAILY-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PRINCIPAL iDAILY-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PRINCIPAL iFIXED-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "PRINCIPAL iFIXED-D": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBAUD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBAUDD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBDBOND(A)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBDLITE(A)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBEMBOND": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBEMBOND(A)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBFIXEDA": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBFIXEDD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBFP": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBFPD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBFST": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBFSTD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBGLOB": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBGLOB(D)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBGOFIX(A)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBRF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBSFF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBSFFPLUS(IN)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBTB(A)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBTB(D)": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "SCBUSDYIELD": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TFIF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TISCOFIX-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TLA-GFIX": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "TUSBOND-A": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UDAILY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UFFF": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UIDPLUS": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UOBID": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "UQI-N": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "USDAILY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "USDREADY": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "X-EMBOND": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "X-Plus": {
+  "n": null,
+  "s": "2021-12-01"
+ },
+ "tsp1-preserver": {
+  "n": null,
+  "s": "2021-12-01"
+ }
 }
