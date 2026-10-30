@@ -806,6 +806,19 @@ function expected1y(f) {
   const lo = Math.floor(v * 10 + 1e-9) / 10, hi = lo + 0.1;
   return `${lo.toFixed(1)}-${hi.toFixed(1)}%`;
 }
+// แยกจากนโยบายลงทุน: พูดถึงตราสารเอกชน/หุ้นกู้ หรือเขียนกว้าง ๆ ว่าตราสารหนี้ = ได้ทั้งภาครัฐและเอกชน
+// พูดถึงแต่ตราสารภาครัฐ (ตั๋วเงินคลัง พันธบัตรรัฐบาล ธปท. ฯลฯ) ไม่พูดถึงเอกชน = ภาครัฐ
+function govPriv(f) {
+  const raw = String(f?.sec?.investment_policy_desc || ""); if (!raw) return "";
+  // ตัดข้อความเชิงห้าม/ยกเว้นออกก่อน เช่น "ต้องไม่เป็นหุ้นกู้ด้อยสิทธิ", "ไม่ลงทุนในตราสารหนี้ภาคเอกชน"
+  const t = raw.replace(/หุ้นกู้ด้อยสิทธิ|ตราสารด้อยสิทธิ/g, " ")
+    .replace(/(ต้องไม่เป็น|ไม่เป็น|ไม่รวม(?:ถึง)?|ยกเว้น|มิใช่|ไม่ใช่|ไม่ลงทุน(?:ใน)?|มิได้ลงทุน(?:ใน)?|ห้ามลงทุน(?:ใน)?)[^,.;()]{0,40}?(เอกชน|หุ้นกู้|ตั๋วแลกเงิน)/g, " ");
+  // ใช้เฉพาะคำที่บอกชัดว่าเป็นภาคเอกชน (คำอย่าง "หุ้นกู้" "ตั๋วแลกเงิน" มักอยู่ในรายการประเภทตราสารทั่วไปท้ายนโยบาย)
+  const priv = /เอกชน|ตราสารหนี้ของบริษัท|private sector|corporate/i.test(t);
+  // ภาครัฐ เฉพาะเมื่อประโยคแรก ๆ ของนโยบายบอกว่าเน้นตราสารภาครัฐ (ไม่นับรายการประเภทตราสารท้ายนโยบาย)
+  const gov = /ภาครัฐ|รัฐบาล|ตั๋วเงินคลัง|ธนาคารแห่งประเทศไทย|กระทรวงการคลัง|government|treasury|t-bill/i.test(t.slice(0, 300));
+  return !priv && gov ? "สามารถลงทุนในตราสารภาครัฐ" : "สามารถลงทุนได้ทั้งตราสารภาครัฐ และเอกชน";
+}
 function feeOf(f, test) {
   const fees = f?.x?.fees || {};
   const k = Object.keys(fees).find(test); if (!k) return "";
@@ -844,6 +857,7 @@ function secCell(f, label) {
     case keyOf("อายุเฉลี่ยของตราสาร"): return durText(f.x?.duration);
     case keyOf("Yield to Maturity"): return numPct(f.x?.ytm);
     case keyOf("อัตราผลตอบแทนที่คาดหวัง 1 ปี"): return expected1y(f);
+    case keyOf("สัดส่วนประเภทการลงทุนทั้งภาครัฐและเอกชน"): return govPriv(f);
     case keyOf("ทีมผู้เชี่ยวชาญดูแล"): return "ไม่มี";
     case keyOf("ค่าธรรมเนียมขาย (Front-End Fee)"): return feeOf(f, k => /ขาย|front/i.test(k) && !/ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch/i.test(k))
       || (Object.keys(f.x?.fees || {}).length ? "ไม่มี" : "");
