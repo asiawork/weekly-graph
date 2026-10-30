@@ -611,25 +611,27 @@ function niceStep(span, target) {
   return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10;
 }
 function draw(ctx, opts = {}) {
-  const title = $("title").value.trim();
+  const si = startInfo();
   const ser = selected.map(n => byName(n)).filter(Boolean).map(f => {
     const pts = slice(f); const b = pts[0]?.[1];
     return { name: f.name, color: colorOf(f.name), hi: isHero(f), pts: pts.map(([d, v]) => [dnum(d), (v / b - 1) * 100]) };
   }).filter(s => s.pts.length >= 2);
+  const INK = "#1f2937", MUTE = "#6b7280", GRID = "#e9ecf1";
 
   ctx.save();
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-  // ป้ายท้ายเส้น = ชื่อกอง + ค่าล่าสุด (แทน legend) · เผื่อที่ทางขวาให้พอดีป้ายที่ยาวที่สุด
-  const tagText = (s) => `${s.name}  ${pct(s.pts.at(-1)[1], 2)}`;
-  ctx.font = `700 16px ${FONT_B}`;
-  const tagW = Math.max(0, ...ser.map(s => ctx.measureText(tagText(s)).width)) + 20;
-  const L = 70, R = Math.min(420, Math.max(120, tagW + 24)), T = title ? 70 : 30;
-  const B = 44;
-  const pw = W - L - R, ph = H - T - B;
-  if (title) { ctx.font = `600 26px ${FONT_B}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
+  // หัวกราฟ: ชื่อ + ช่วงเวลา (เปลี่ยนตามช่วงที่เลือก)
+  const title = `${$("title").value.trim() || "ผลตอบแทนสะสม"}, ${thDate(si.s)} – ${thDate(si.e)}`;
+  ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillText(title, 24, 42);
   if (!ser.length) { ctx.restore(); layout = null; return; }
 
-  const x0 = dnum(startInfo().s), x1 = Math.max(dnum(startInfo().e), x0 + 1);
+  // ท้ายเส้น = % อย่างเดียว · เผื่อที่ทางขวาให้พอดี
+  ctx.font = `700 17px ${FONT_B}`;
+  const R = Math.max(...ser.map(s => ctx.measureText(pct(s.pts.at(-1)[1], 2)).width)) + 26;
+  const L = 74, T = 76, B = 40, pw = W - L - R, ph = H - T - B;
+
+  const x0 = dnum(si.s), x1 = Math.max(dnum(si.e), x0 + 1);
   let y0 = Math.min(0, ...ser.flatMap(s => s.pts.map(p => p[1]))), y1 = Math.max(0, ...ser.flatMap(s => s.pts.map(p => p[1])));
   if (y1 - y0 < 0.05) { y1 += 0.05; }
   const pad = (y1 - y0) * 0.06; y1 += pad; if (y0 < 0) y0 -= pad;
@@ -639,57 +641,59 @@ function draw(ctx, opts = {}) {
   const Y = (v) => T + (y1 - v) / (y1 - y0) * ph;
   layout = { X, Y, x0, x1, L, T, pw, ph, ser };
 
-  // แกน Y
+  // แกน Y: เส้นกริดแนวนอนจาง ๆ · เส้น 0% สีเข้ม
   const dp = (String(+step.toFixed(6)).split(".")[1] || "").length;
   ctx.font = `15px ${FONT}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   for (let v = Math.ceil(y0 / step - 1e-9) * step; v <= y1 + step / 2; v += step) {
-    const y = Math.round(Y(v)) + 0.5;
-    ctx.strokeStyle = Math.abs(v) < step / 2 ? "#9aa3af" : "#eceff3"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
-    ctx.fillStyle = "#6b7280"; ctx.fillText((Math.abs(v) < step / 2 ? 0 : v).toFixed(dp) + "%", L - 10, y);
+    const y = Math.round(Y(v)) + 0.5, zero = Math.abs(v) < step / 2;
+    if (!zero) { ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke(); }
+    ctx.fillStyle = MUTE; ctx.fillText((zero ? 0 : v).toFixed(dp) + "%", L - 10, y);
   }
+  const yz = Math.round(Y(Math.max(y0, Math.min(0, y1)))) + 0.5;
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(L, yz); ctx.lineTo(L + pw, yz); ctx.stroke();
 
-
-  // แกน X: เลือกระยะเดือนให้ได้ราว 6–12 ป้าย
+  // แกน X: ขีดสั้นที่เส้นล่าง ไม่มีกริดแนวตั้ง
   const months = (x1 - x0) / 30.44;
-  const every = [1, 2, 3, 6, 12].find(k => months / k <= 12) || 12;
+  const every = [1, 2, 3, 6, 12].find(k => months / k <= 10) || 12;
   const sd = new Date(x0 * 864e5), ticks = [];
   let t = new Date(Date.UTC(sd.getUTCFullYear(), sd.getUTCMonth() + 1, 1));
   while (dnum(t.toISOString().slice(0, 10)) <= x1) { if (t.getUTCMonth() % every === 0 || every === 1) ticks.push(t.toISOString().slice(0, 10)); t = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1)); }
   if (months < 1.5) { ticks.length = 0; for (let d = Math.ceil(x0); d <= x1; d += 7) ticks.push(isoOf(d)); }
+  const base = T + ph;
+  if (Math.abs(yz - base) > 1) { ctx.strokeStyle = "#c7ccd4"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, base + .5); ctx.lineTo(L + pw, base + .5); ctx.stroke(); }
   ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.font = `15px ${FONT}`;
   for (const iso of ticks) {
     const x = Math.round(X(dnum(iso))) + 0.5;
-    ctx.strokeStyle = "#f2f4f7"; ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
-    ctx.strokeStyle = "#9aa3af"; ctx.beginPath(); ctx.moveTo(x, T + ph); ctx.lineTo(x, T + ph + 5); ctx.stroke();
+    ctx.strokeStyle = "#9aa3af"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x, base + 5); ctx.stroke();
     const [yy, mm, dd] = iso.split("-");
-    ctx.fillStyle = "#6b7280"; ctx.fillText(months < 1.5 ? `${+dd} ${TH_MON[+mm - 1]}` : `${TH_MON[+mm - 1]} ${(+yy + 543) % 100}`, x, T + ph + 9);
+    ctx.fillStyle = MUTE; ctx.fillText(months < 1.5 ? `${+dd} ${TH_MON[+mm - 1]}` : every >= 12 ? `${+yy + 543}` : `${TH_MON[+mm - 1]} ${(+yy + 543) % 100}`, x, base + 9);
   }
-  ctx.strokeStyle = "#9aa3af"; ctx.beginPath(); ctx.moveTo(L, T + ph + .5); ctx.lineTo(L + pw, T + ph + .5); ctx.stroke();
 
-  // เส้น (เส้นแรกวาดทีหลังให้อยู่บนสุด)
-  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 4, pw, ph + 8); ctx.clip();
+  // เส้น (FIXEDSP อยู่บนสุด)
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 6, pw + 2, ph + 12); ctx.clip();
   ctx.lineJoin = "round"; ctx.lineCap = "round";
   const hasHero = ser.some(s => s.hi);
   for (const s of [...ser].sort((a, b) => (a.hi - b.hi) || (ser.indexOf(b) - ser.indexOf(a)))) {
-    ctx.strokeStyle = s.color; ctx.lineWidth = s.hi ? 4.5 : hasHero ? 2 : (s === ser[0] ? 3 : 2.4);
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.hi ? 4.5 : hasHero ? 2.4 : 3;
     ctx.beginPath(); s.pts.forEach(([d, v], i) => i ? ctx.lineTo(X(d), Y(v)) : ctx.moveTo(X(d), Y(v))); ctx.stroke();
   }
   ctx.restore();
 
-  // ป้ายชื่อกอง + ค่าล่าสุดท้ายเส้น (กันซ้อนกัน)
-  const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]) })).sort((a, b) => a.y - b.y);
-  const gap = 32;
+  // ชื่อกองมุมบนซ้ายในกราฟ (ตัวหนาสีเดียวกับเส้น)
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  const leg = [...ser].sort((a, b) => b.pts.at(-1)[1] - a.pts.at(-1)[1]);   // เรียงตามผลตอบแทนท้ายเส้น (สูง → ต่ำ)
+  leg.forEach((s, i) => { ctx.font = `700 18px ${FONT_B}`; ctx.fillStyle = s.color; ctx.fillText(s.name, L + 18, T + 14 + i * 26); });
+
+  // % ท้ายเส้น (สีเดียวกับเส้น กันซ้อนกัน)
+  const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]), x: X(s.pts.at(-1)[0]) })).sort((a, b) => a.y - b.y);
+  const gap = 22;
   for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < gap) tags[i].y = tags[i - 1].y + gap;
-  const over = tags.length ? tags.at(-1).y - (T + ph) : 0;
+  const over = tags.length ? tags.at(-1).y - base : 0;
   if (over > 0) { tags.forEach(t => t.y -= over); for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < gap) tags[i].y = tags[i + 1].y - gap; }
   for (const t of tags) {
-    ctx.font = `${t.s.hi ? 700 : 600} 16px ${FONT_B}`;
-    const txt = tagText(t.s), w = ctx.measureText(txt).width + 20, x = L + pw + 10;
-    ctx.fillStyle = t.s.color; roundRect(ctx, x, t.y - 14, w, 28, 7); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 10, t.y + 0.5);
+    ctx.font = `700 17px ${FONT_B}`; ctx.fillStyle = t.s.color; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(pct(t.s.pts.at(-1)[1], 2), L + pw + 10, t.y);
   }
-
   ctx.restore();
 }
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
