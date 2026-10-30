@@ -789,6 +789,19 @@ function durText(v) {
   const months = +s * 12, m = Math.floor(months), d = Math.round((months - m) * 30.4);
   return m ? `${m} เดือน${d ? ` ${d} วัน` : ""}` : `${d} วัน`;   // SEC รายงานเป็นปี
 }
+// อัตราผลตอบแทนที่คาดหวัง 1 ปี = ผลตอบแทน 3 เดือนย้อนหลัง (จาก NAV ล่าสุด) × 4 แสดงเป็นช่วงกว้าง 0.1% เช่น 0.57% → "0.5-0.6%"
+const EXP_MONTHS = 3, EXP_MULT = 12 / EXP_MONTHS;
+function expected1y(f) {
+  if (!f?.d?.length || f.d.length < 20) return "";
+  const end = f.d.at(-1), t = new Date(end + "T00:00:00Z");
+  t.setUTCMonth(t.getUTCMonth() - EXP_MONTHS);
+  const from = t.toISOString().slice(0, 10);
+  if (f.d[0] > from) return "";                                 // ข้อมูลไม่ถึง 3 เดือน
+  let i = f.d.length - 1; while (i > 0 && f.d[i] > from) i--;   // NAV วันทำการสุดท้ายก่อน/ตรงวันนั้น
+  const v = (f.v.at(-1) / f.v[i] - 1) * 100 * EXP_MULT;
+  const lo = Math.floor(v * 10 + 1e-9) / 10, hi = lo + 0.1;
+  return `${lo.toFixed(1)}-${hi.toFixed(1)}%`;
+}
 function feeOf(f, test) {
   const fees = f?.x?.fees || {};
   const k = Object.keys(fees).find(test); if (!k) return "";
@@ -824,7 +837,8 @@ function secCell(f, label) {
     case keyOf("สัดส่วนการลงทุนทั้งในและต่างประเทศ"): return COUNTRY[String(f.sec?.invest_country_flag || "")] || "";
     case keyOf("อายุเฉลี่ยของตราสาร"): return durText(f.x?.duration);
     case keyOf("Yield to Maturity"): return numPct(f.x?.ytm);
-    case keyOf("อัตราผลตอบแทนที่คาดหวัง 1 ปี"): return numPct(f.x?.ytm);   // ใช้ YTM จาก factsheet/statistics
+    case keyOf("อัตราผลตอบแทนที่คาดหวัง 1 ปี"): return expected1y(f);
+    case keyOf("ทีมผู้เชี่ยวชาญดูแล"): return "ไม่มี";
     case keyOf("ค่าธรรมเนียมขาย (Front-End Fee)"): return feeOf(f, k => /ขาย|front/i.test(k) && !/ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch/i.test(k));
     case keyOf("ค่าธรรมเนียมการจัดการ + อื่น ๆ"): return feeOf(f, k => /รวม|total/i.test(k) && /ค่าใช้จ่าย|ค่าธรรมเนียม|expense/i.test(k)) || feeOf(f, k => /การจัดการ|management/i.test(k));
     case keyOf("ระยะเวลารับเงินค่าขายคืน"): return redempOf(f);
