@@ -117,8 +117,6 @@ def load_extras(fetch_urls=True):
             return None
         if d > cur:
             ex[key]["_d_" + slot] = d
-            if slot == "fees":
-                ex[key].pop("fees", None)
         return key
 
     def put_stats(row):
@@ -136,13 +134,16 @@ def load_extras(fetch_urls=True):
             return
         if re.search(r"ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch", desc, re.I) and not re.search(r"front", desc, re.I):
             return
-        key = newer(row, "fees")
-        if key is None:
+        # ค่าธรรมเนียมแต่ละประเภทใช้แถวที่ใหม่สุดของประเภทนั้น
+        key = ckey(row.get("proj_id"), row.get("fund_class_name"))
+        d = str(row.get("start_date") or "")
+        fees = ex.setdefault(key, {}).setdefault("fees", {})
+        if desc in fees and d < fees[desc].get("_d", ""):
             return
-        e = {"rate": row.get("rate"), "actual": row.get("actual_value")}
+        e = {"rate": row.get("rate"), "actual": row.get("actual_value"), "_d": d}
         if e["actual"] in (None, "") and e["rate"] in (None, ""):
             e["other"] = str(row.get("fee_other_desc") or "")[:80]
-        ex[key].setdefault("fees", {})[desc] = e
+        fees[desc] = e
 
     def put_redemp(row):
         if str(row.get("type") or "").lower() != "redemption":
@@ -182,6 +183,8 @@ def load_extras(fetch_urls=True):
     for v in ex.values():
         for k in [k for k in v if k.startswith("_d_")]:
             del v[k]
+        for e in (v.get("fees") or {}).values():
+            e.pop("_d", None)
     return ex
 
 

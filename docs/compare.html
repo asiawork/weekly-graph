@@ -140,6 +140,7 @@
   .src { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
   .dt tbody td { min-width: 150px; }
   .dt thead th { text-align: center; }
+  .dt tbody td { color: var(--navy); }
   .infos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
   .info { background: var(--card); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 14px 16px; border-top: 4px solid var(--c, var(--navy)); }
   .info h4 { margin: 0; font-size: 17px; color: var(--navy); }
@@ -251,7 +252,7 @@
       <h3>ผลตอบแทน <small id="tblNote"></small></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="perf" class="perf-t"></table></div>
 
-      <h3>เทียบกับ FIXEDSP <span class="actions"><button class="btn primary sm" id="copyT1img" title="รูปขนาดพอดีกรอบเนื้อหาในสไลด์ ฟอนต์ไม่เพี้ยน">Copy เป็นรูป</button><button class="btn ghost sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง (แก้ได้)</button></span></h3>
+      <h3>เทียบกับ FIXEDSP <span class="actions"><button class="btn primary sm" id="copyT1img" title="รูปขนาดพอดีกรอบเนื้อหาในสไลด์ ฟอนต์ไม่เพี้ยน">Copy เป็นรูป</button><button class="btn ghost sm" id="dlT1img" title="Insert → Pictures ใน PowerPoint ได้ขนาดพอดีกรอบสไลด์">ดาวน์โหลดรูป</button><button class="btn ghost sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง (แก้ได้)</button></span></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="t1" class="dt"></table></div>
 
       <h3>ข้อมูลกองทุน</h3>
@@ -619,7 +620,7 @@ function draw(ctx, opts = {}) {
   ctx.font = `700 16px ${FONT_B}`;
   const tagW = Math.max(0, ...ser.map(s => ctx.measureText(tagText(s)).width)) + 20;
   const L = 70, R = Math.min(420, Math.max(120, tagW + 24)), T = title ? 70 : 30;
-  const B = 70;
+  const B = 44;
   const pw = W - L - R, ph = H - T - B;
   if (title) { ctx.font = `600 26px ${FONT_B}`; ctx.fillStyle = "#1b3560"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42); }
   if (!ser.length) { ctx.restore(); layout = null; return; }
@@ -685,11 +686,6 @@ function draw(ctx, opts = {}) {
     ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(txt, x + 10, t.y + 0.5);
   }
 
-  // ช่วงข้อมูล
-  if (opts.stamp !== false) {
-    ctx.font = `13px ${FONT}`; ctx.fillStyle = "#9aa3af"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(`% เปลี่ยนแปลงของ NAV · ข้อมูล ${thDate(startInfo().s)} – ${thDate(range.e)} · ที่มา: SEC Open API`, 16, H - 12);
-  }
   ctx.restore();
 }
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
@@ -847,7 +843,8 @@ function secCell(f, label) {
     case keyOf("Yield to Maturity"): return numPct(f.x?.ytm);
     case keyOf("อัตราผลตอบแทนที่คาดหวัง 1 ปี"): return expected1y(f);
     case keyOf("ทีมผู้เชี่ยวชาญดูแล"): return "ไม่มี";
-    case keyOf("ค่าธรรมเนียมขาย (Front-End Fee)"): return feeOf(f, k => /ขาย|front/i.test(k) && !/ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch/i.test(k));
+    case keyOf("ค่าธรรมเนียมขาย (Front-End Fee)"): return feeOf(f, k => /ขาย|front/i.test(k) && !/ขายคืน|รับซื้อคืน|back|สับเปลี่ยน|switch/i.test(k))
+      || (Object.keys(f.x?.fees || {}).length ? "ไม่มี" : "");
     case keyOf("ค่าธรรมเนียมการจัดการ + อื่น ๆ"): return feeOf(f, k => /รวม|total/i.test(k) && /ค่าใช้จ่าย|ค่าธรรมเนียม|expense/i.test(k)) || feeOf(f, k => /การจัดการ|management/i.test(k));
     case keyOf("ระยะเวลารับเงินค่าขายคืน"): return redempOf(f);
     case keyOf("วันที่จดทะเบียนกองทุน"): return secVal(f, ["regis_date"]) || "";
@@ -896,8 +893,8 @@ async function copyModel(m) {
   const n = m.cols.length, colW = Math.floor((SLIDE_T.w - SLIDE_T.labelW) / Math.max(n, 1)), rowH = Math.floor(SLIDE_T.h / (m.rows.length + 1));
   const base = `border:1px solid ${LINE};padding:2pt 6pt;text-align:center;vertical-align:middle;height:${rowH}pt;`;
   const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;border-color:#fff ${LINE};`;
-  const head = base + `width:${colW}pt;background:#fff;color:#000;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;`;
-  const td = base + `width:${colW}pt;background:#fff;color:#000;font-family:'BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.bodySize}pt;`;
+  const head = base + `width:${colW}pt;background:#fff;color:${NAVY};font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;`;
+  const td = base + `width:${colW}pt;background:#fff;color:${NAVY};font-family:'BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.bodySize}pt;`;
   const html = `<table style="border-collapse:collapse;width:${SLIDE_T.w}pt"><colgroup><col style="width:${SLIDE_T.labelW}pt">${m.cols.map(() => `<col style="width:${colW}pt">`).join("")}</colgroup>` +
     `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
     m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
@@ -941,7 +938,7 @@ function tableCanvas(m, scale = 3) {
     const y = ys[r]; rh = ys[r + 1] - ys[r];
     ctx.fillStyle = NAVY; ctx.fillRect(0, y, lw, rh);
     cell(label, 0, y, lw, fsH, "b", "#fff");
-    vals.forEach((v, i) => cell(v, lw + i * cw, y, cw, isHead ? fsH : fsB, isHead ? "b" : "t", "#111"));
+    vals.forEach((v, i) => cell(v, lw + i * cw, y, cw, isHead ? fsH : fsB, isHead ? "b" : "t", NAVY));
   });
   // เส้นตาราง: เส้นขาวคั่นแถวในคอลัมน์หัวข้อ, เส้นเทาคั่นแถวในเนื้อหา, เส้นเข้มคั่นคอลัมน์และใต้หัวตาราง
   ctx.lineWidth = 1;
@@ -955,10 +952,24 @@ function tableCanvas(m, scale = 3) {
   ctx.strokeRect(0.5, 0.5, W2 - 1, H2 - 1);
   return c;
 }
+// ใส่ค่า DPI (chunk pHYs) ใน PNG เพื่อให้วางแล้วได้ขนาดจริงตามสไลด์
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (u8) => { let c = 0xffffffff; for (const b of u8) c = CRC_T[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+async function pngWithDpi(blob, dpi) {
+  const src = new Uint8Array(await blob.arrayBuffer()), ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(21), dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9); chunk.set([0x70, 0x48, 0x59, 0x73], 4); dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1;
+  dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+  const at = 8 + 25;                                   // หลัง signature + IHDR
+  const out = new Uint8Array(src.length + 21); out.set(src.subarray(0, at)); out.set(chunk, at); out.set(src.subarray(at), at + 21);
+  return new Blob([out], { type: "image/png" });
+}
+const TABLE_SCALE = 3;                                  // 3 px ต่อ 1 pt = 216 dpi
+async function tablePng(m) { return pngWithDpi(await toBlob(tableCanvas(m, TABLE_SCALE)), 72 * TABLE_SCALE); }
 async function copyTableImage(m) {
   try {
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": toBlob(tableCanvas(m)) })]);
-    toast("Copy รูปตารางแล้ว วางในสไลด์แล้วลากให้เต็มกรอบเนื้อหาได้พอดี");
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": tablePng(m) })]);
+    toast("Copy รูปตารางแล้ว ขนาด 30.97 × 14.04 ซม. (พอดีกรอบเนื้อหาในสไลด์)");
   } catch (e) { toast("เบราว์เซอร์นี้ copy รูปไม่ได้"); }
 }
 /* ---------- ปุ่ม */
@@ -988,6 +999,11 @@ $("print").onclick = () => {
 };
 $("copyT1").onclick = () => copyModel(modelT1());
 $("copyT1img").onclick = () => copyTableImage(modelT1());
+$("dlT1img").onclick = async () => {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await tablePng(modelT1()));
+  a.download = "เทียบกับ_FIXEDSP_" + modelT1().cols.map(c => c.name).join("_").replace(/[\\/:*?"<>|]+/g, "-") + ".png"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
 
 /* ---------- state ใน URL */
