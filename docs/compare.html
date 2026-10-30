@@ -224,6 +224,7 @@
     #report .page img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
     #report .page .foot { align-self: stretch; margin-top: 4mm; color: #8a929e; font-size: 9pt; text-align: right; }
   }
+  .dt td.fx, .dt thead th.fx { background: #dce8fb; }
 </style>
 </head>
 <body>
@@ -316,7 +317,6 @@
           </div>
         </div>
         <div class="chart"><canvas id="cv2" width="1200" height="560"></canvas></div>
-        <div class="tip">ผลตอบแทนแต่ละปีปฏิทิน (สิ้นปีก่อน → สิ้นปี) ปีล่าสุดเป็น YTD · ใช้สี หัวกราฟ และภาษาเดียวกับกราฟด้านบน</div>
       </div>
 
       <h3>เทียบกับ FIXEDSP <span class="actions"><button class="btn primary sm" id="copyT1img" title="รูปขนาดพอดีกรอบเนื้อหาในสไลด์ ฟอนต์ไม่เพี้ยน">Copy เป็นรูป</button><button class="btn ghost sm" id="dlT1img" title="Insert → Pictures ใน PowerPoint ได้ขนาดพอดีกรอบสไลด์">ดาวน์โหลดรูป</button><button class="btn ghost sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง (แก้ได้)</button></span></h3>
@@ -341,7 +341,8 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5", "#2f9e5b", "#7a8794"];
+const PALETTE = ["#2f3747", "#5fb3a6", "#d0273e", "#e0a100", "#8e5bb5", "#2f9e5b", "#7a8794", "#c2185b"];
+const HERO_COLOR = "#3478f6";   // FIXEDSP (สีตามสไลด์)
 const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const EN_MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -382,7 +383,12 @@ const byName = (n) => allSeries().find(f => f.name === n);
 const isIPO = (f) => String(f?.sec?.fund_status || "").toUpperCase() === "IPO";
 const ipoTag = (f) => isIPO(f) ? `<span class="tag" title="กองทุนเปิดขายครั้งแรก (IPO) ยังไม่มี NAV ย้อนหลัง">IPO</span>` : "";
 const isHero = (f) => !!f && (f.custom || /FIXEDSP/i.test(f.name));
-const colorOf = (n) => COLORS[n] || PALETTE[Math.max(0, selected.indexOf(n)) % PALETTE.length];
+const colorOf = (n) => {
+  if (COLORS[n]) return COLORS[n];
+  if (isHero(byName(n)) || /FIXEDSP/i.test(n)) return HERO_COLOR;
+  const others = selected.filter(x => !(isHero(byName(x)) || /FIXEDSP/i.test(x)));
+  return PALETTE[Math.max(0, others.indexOf(n)) % PALETTE.length];
+};
 const saveColors = () => { try { localStorage.setItem(COLOR_STORE, JSON.stringify(COLORS)); } catch (e) {} };
 
 /* ---------- CSV */
@@ -715,7 +721,7 @@ function annualModel() {
   $("peerYear").textContent = lastY;
   if ($("showPeer").checked) {
     const vals = years.map(y => y === lastY && ytd ? peerYtd() : (PEER_YEARS[y] ?? null));
-    if (vals.some(v => v != null)) { peer = { name: LANG === "en" ? "Peer average*" : "ค่าเฉลี่ยกลุ่ม*", color: "#d6dbe3", peer: true, vals, ytdOn: ytd && peerYtd() != null }; rows.push(peer); }
+    if (vals.some(v => v != null)) { peer = { name: LANG === "en" ? "Peer average*" : "ค่าเฉลี่ยกลุ่ม*", color: "#d9dde6", peer: true, vals, ytdOn: ytd && peerYtd() != null }; rows.push(peer); }
   }
   return { years, ytd, ytdEnd, rows, peer };
 }
@@ -757,7 +763,7 @@ function drawBars(ctx) {
       const v = r.vals[g]; if (v == null) return;
       const x = x0 + i * (bw + gap), ya = Y(Math.max(v, 0)), yb = Y(Math.min(v, 0));
       ctx.fillStyle = r.color; ctx.fillRect(x, ya, bw, Math.max(1, yb - ya));
-      ctx.font = `${r.hi ? 700 : 500} 14px ${r.hi ? FONT_B : FONT}`; ctx.fillStyle = INK; ctx.textAlign = "center";
+      ctx.font = `700 15px ${FONT_B}`; ctx.fillStyle = "#111827"; ctx.textAlign = "center";
       ctx.textBaseline = v >= 0 ? "bottom" : "top";
       ctx.fillText(v.toFixed(2) + "%", x + bw / 2, v >= 0 ? ya - 6 : yb + 6);
     });
@@ -1077,28 +1083,31 @@ function modelT1() {
 }
 function tableHTML({ cols, rows }) {
   const lab = (l) => esc(l).replace(/\n/g, "<br>");
-  return `<thead><tr><th>กองทุน</th>${cols.map(c => `<th>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
-    `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const fx = (i) => isFxCol(cols[i]) ? ' class="fx"' : "";
+  return `<thead><tr><th>กองทุน</th>${cols.map((c, i) => `<th${fx(i)}>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
+    `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map((v, i) => `<td${fx(i)}>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
 }
 function renderTable() {
   renderInfos();
   $("t1").innerHTML = tableHTML(modelT1());
 }
 /* ขนาดกรอบตารางในสไลด์ 16:9 (13.33 × 7.5 นิ้ว = 960 × 540 pt) ตามสไลด์ "รายละเอียดพอร์ตกองทุนตราสารหนี้ระยะสั้น"
-   ตารางกว้าง 878 pt สูง 398 pt · คอลัมน์หัวข้อกว้าง 340 pt · หัวข้อ 14 pt ตัวหนา · เนื้อหา 12 pt */
-const SLIDE_T = { w: 878, h: 398, labelW: 340, headSize: 14, bodySize: 12 };
+   ตารางกว้าง 878 pt สูง 398 pt · คอลัมน์หัวข้อกว้าง 340 pt · หัวข้อ 16 pt ตัวหนา · กองอื่น 12 pt · FIXEDSP 14 pt (หัวตัวหนา พื้นฟ้าอ่อน) */
+const SLIDE_T = { w: 878, h: 398, labelW: 340, labelSize: 16, bodySize: 12, fxSize: 14, fxBg: "#dce8fb" };
+const isFxCol = (c) => c.name === "FIXEDSP" && !c.f;
 const NAVY = "#1b3560", LINE = "#1f2a44";
 async function copyModel(m) {
   const txt = (v) => v || "";
   const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
   const n = m.cols.length, colW = Math.floor((SLIDE_T.w - SLIDE_T.labelW) / Math.max(n, 1)), rowH = Math.floor(SLIDE_T.h / (m.rows.length + 1));
   const base = `border:1px solid ${LINE};padding:2pt 6pt;text-align:center;vertical-align:middle;height:${rowH}pt;`;
-  const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;border-color:#fff ${LINE};`;
-  const head = base + `width:${colW}pt;background:#fff;color:${NAVY};font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;`;
-  const td = base + `width:${colW}pt;background:#fff;color:${NAVY};font-family:'BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.bodySize}pt;`;
+  const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.labelSize}pt;border-color:#fff ${LINE};`;
+  const cs = (c, head) => base + `width:${colW}pt;background:${isFxCol(c) ? SLIDE_T.fxBg : "#fff"};color:${NAVY};` +
+    (head && isFxCol(c) ? `font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;` : `font-family:'BLS Text',Tahoma,sans-serif;`) +
+    `font-size:${isFxCol(c) ? SLIDE_T.fxSize : SLIDE_T.bodySize}pt;`;
   const html = `<table style="border-collapse:collapse;width:${SLIDE_T.w}pt"><colgroup><col style="width:${SLIDE_T.labelW}pt">${m.cols.map(() => `<col style="width:${colW}pt">`).join("")}</colgroup>` +
-    `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
-    m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
+    `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${cs(c, true)}">${esc(c.name)}</td>`).join("")}</tr>` +
+    m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map((v, i) => `<td style="${cs(m.cols[i], false)}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
   } catch (e) { await navigator.clipboard.writeText(tsv); }
@@ -1114,8 +1123,9 @@ function tableCanvas(m, scale = 3) {
   const wts = rows.map(([l]) => String(l).includes("\n") ? 1.6 : 1), unit = H2 / wts.reduce((a, b) => a + b, 0);
   const ys = wts.reduce((a, w) => (a.push(a.at(-1) + w * unit), a), [0]);
   let rh = unit; const lw = SLIDE_T.labelW, cw = (W2 - lw) / n;
-  const fsH = SLIDE_T.headSize, fsB = SLIDE_T.bodySize;
+  const fsL = SLIDE_T.labelSize, fsB = SLIDE_T.bodySize, fsF = SLIDE_T.fxSize;
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W2, H2);
+  m.cols.forEach((c, i) => { if (isFxCol(c)) { ctx.fillStyle = SLIDE_T.fxBg; ctx.fillRect(lw + i * cw, 0, cw, H2); } });
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   // ตัดบรรทัด: ตาม \n ก่อน แล้วตัดหลัง "/" หรือช่องว่างถ้ายาวเกินช่อง
   const wrap = (text, maxW) => {
@@ -1143,8 +1153,8 @@ function tableCanvas(m, scale = 3) {
   rows.forEach(([label, vals, isHead], r) => {
     const y = ys[r]; rh = ys[r + 1] - ys[r];
     ctx.fillStyle = NAVY; ctx.fillRect(0, y, lw, rh);
-    cell(label, 0, y, lw, fsH, "b", "#fff");
-    vals.forEach((v, i) => cell(v, lw + i * cw, y, cw, isHead ? fsH : fsB, isHead ? "b" : "t", NAVY));
+    cell(label, 0, y, lw, fsL, "b", "#fff");
+    vals.forEach((v, i) => { const fx = isFxCol(m.cols[i]); cell(v, lw + i * cw, y, cw, fx ? fsF : fsB, isHead && fx ? "b" : "t", NAVY); });
   });
   // เส้นตาราง: เส้นขาวคั่นแถวในคอลัมน์หัวข้อ, เส้นเทาคั่นแถวในเนื้อหา, เส้นเข้มคั่นคอลัมน์และใต้หัวตาราง
   ctx.lineWidth = 1;
