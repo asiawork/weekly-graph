@@ -224,7 +224,20 @@
     #report .page img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
     #report .page .foot { align-self: stretch; margin-top: 4mm; color: #8a929e; font-size: 9pt; text-align: right; }
   }
-  .dt td.fx, .dt thead th.fx { background: #dce8fb; }
+  /* หน้าตาเหมือนตารางที่ Copy ไปวางในสไลด์: หัวข้อ 16 · กองอื่น 12 · FIXEDSP 14 (สัดส่วนเดียวกัน) */
+  #t1 { border-collapse: collapse; border: 1px solid #1f2a44; table-layout: fixed; width: 100%; min-width: 640px; }
+  #t1 th, #t1 td { text-align: center !important; vertical-align: middle !important; padding: 9px 12px; }
+  #t1 th:first-child { background: #1b3560 !important; color: #fff !important; font-weight: 700; font-size: 16px; width: 34%;
+    border-bottom: 1px solid #fff; border-right: 1px solid #1f2a44; }
+  #t1 tbody td { min-width: 0; }
+  #t1 thead th:not(:first-child), #t1 td { background: #fff; color: #1b3560; font-weight: 400; font-size: 13px;
+    border-left: 1px solid #1f2a44; border-bottom: 1px solid #e3e6eb; }
+  #t1 thead th:not(:first-child) { border-bottom: 1px solid #1f2a44; }
+  #t1 .fx { background: #dce8fb !important; font-size: 15px !important; }
+  #t1 thead th.fx { font-weight: 700 !important; }
+  .card:has(> #t1) { border-radius: 0; overflow: hidden; }
+  .pastehint { font-size: 12.5px; color: var(--muted); font-weight: 400; margin-right: 4px; }
+  @media (max-width: 700px) { .pastehint { display: none; } }
 </style>
 </head>
 <body>
@@ -319,7 +332,7 @@
         <div class="chart"><canvas id="cv2" width="1200" height="560"></canvas></div>
       </div>
 
-      <h3>เทียบกับ FIXEDSP <span class="actions"><button class="btn primary sm" id="copyT1img" title="รูปขนาดพอดีกรอบเนื้อหาในสไลด์ ฟอนต์ไม่เพี้ยน">Copy เป็นรูป</button><button class="btn ghost sm" id="dlT1img" title="Insert → Pictures ใน PowerPoint ได้ขนาดพอดีกรอบสไลด์">ดาวน์โหลดรูป</button><button class="btn ghost sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง (แก้ได้)</button></span></h3>
+      <h3>เทียบกับ FIXEDSP <span class="actions"><span class="pastehint">วางใน PowerPoint แล้วเลือก <b>Keep Source Formatting</b></span><button class="btn primary sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง</button></span></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="t1" class="dt"></table></div>
 
       <h3>ข้อมูลกองทุน</h3>
@@ -372,7 +385,7 @@ const cls = (v) => v == null || !isFinite(v) ? "" : v >= 0 ? "pos" : "neg";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const dnum = (iso) => Date.parse(iso + "T00:00:00Z") / 864e5;
 const isoOf = (n) => new Date(n * 864e5).toISOString().slice(0, 10);
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2400); }
+function toast(msg, ms = 2400) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), ms); }
 const store = {
   get() { try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { return []; } },
   set(v) { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (e) {} },
@@ -1071,7 +1084,7 @@ const FIXEDSP_INFO = {
   "ระยะเวลาที่ควรถือลงทุน": "ตั้งแต่ 1 สัปดาห์ขึ้นไป",
   "ค่าธรรมเนียมขาย (Front-End Fee)": "ปัจจุบันไม่เรียกเก็บ",
   "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "0.24%",
-  "ระยะเวลารับเงินค่าขายคืน": "T+2",
+  "ระยะเวลารับเงินค่าขายคืน": "T+2*",
   "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล",
 };
 const FIXEDSP_MAP = Object.fromEntries(Object.entries(FIXEDSP_INFO).map(([k, v]) => [keyOf(k), v]));
@@ -1096,22 +1109,30 @@ function renderTable() {
 const SLIDE_T = { w: 878, h: 398, labelW: 340, labelSize: 16, bodySize: 12, fxSize: 14, fxBg: "#dce8fb" };
 const isFxCol = (c) => c.name === "FIXEDSP" && !c.f;
 const NAVY = "#1b3560", LINE = "#1f2a44";
+// PowerPoint บน Windows ที่ตั้งขนาดหน้าจอ (Display scale) เกิน 100% ย่อตารางที่วางลงตามสัดส่วนนั้น
+// จึงขยายขนาดใน HTML ชดเชยไว้ก่อน (Mac ไม่ต้อง)
+function pasteScale() {
+  if (!/Windows/i.test(navigator.userAgent)) return 1;
+  const zoom = window.outerWidth && window.innerWidth ? window.outerWidth / window.innerWidth : 1;
+  const os = (window.devicePixelRatio || 1) / (zoom > 0.3 && zoom < 5 ? zoom : 1);
+  return Math.min(3, Math.max(1, Math.round(os * 4) / 4));
+}
 async function copyModel(m) {
-  const txt = (v) => v || "";
+  const txt = (v) => v || "", k = pasteScale(), pt = (v) => `${+(v * k).toFixed(2)}pt`;
   const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
   const n = m.cols.length, colW = Math.floor((SLIDE_T.w - SLIDE_T.labelW) / Math.max(n, 1)), rowH = Math.floor(SLIDE_T.h / (m.rows.length + 1));
-  const base = `border:1px solid ${LINE};padding:2pt 6pt;text-align:center;vertical-align:middle;height:${rowH}pt;`;
-  const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.labelSize}pt;border-color:#fff ${LINE};`;
-  const cs = (c, head) => base + `width:${colW}pt;background:${isFxCol(c) ? SLIDE_T.fxBg : "#fff"};color:${NAVY};` +
+  const base = `border:1px solid ${LINE};padding:${pt(2)} ${pt(6)};text-align:center;vertical-align:middle;height:${pt(rowH)};`;
+  const lab = base + `width:${pt(SLIDE_T.labelW)};background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${pt(SLIDE_T.labelSize)};border-color:#fff ${LINE};`;
+  const cs = (c, head) => base + `width:${pt(colW)};background:${isFxCol(c) ? SLIDE_T.fxBg : "#fff"};color:${NAVY};` +
     (head && isFxCol(c) ? `font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;` : `font-family:'BLS Text',Tahoma,sans-serif;`) +
-    `font-size:${isFxCol(c) ? SLIDE_T.fxSize : SLIDE_T.bodySize}pt;`;
-  const html = `<table style="border-collapse:collapse;width:${SLIDE_T.w}pt"><colgroup><col style="width:${SLIDE_T.labelW}pt">${m.cols.map(() => `<col style="width:${colW}pt">`).join("")}</colgroup>` +
+    `font-size:${pt(isFxCol(c) ? SLIDE_T.fxSize : SLIDE_T.bodySize)};`;
+  const html = `<table style="border-collapse:collapse;width:${pt(SLIDE_T.w)}"><colgroup><col style="width:${pt(SLIDE_T.labelW)}">${m.cols.map(() => `<col style="width:${pt(colW)}">`).join("")}</colgroup>` +
     `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${cs(c, true)}">${esc(c.name)}</td>`).join("")}</tr>` +
     m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map((v, i) => `<td style="${cs(m.cols[i], false)}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
   } catch (e) { await navigator.clipboard.writeText(tsv); }
-  toast("Copy ตารางแล้ว วางใน PowerPoint ได้เลย");
+  toast("Copy ตารางแล้ว · วางใน PowerPoint แล้วเลือก Keep Source Formatting (คลิกขวา → ตัวเลือกการวาง → เก็บการจัดรูปแบบต้นฉบับ)", 6000);
 }
 // วาดตารางเป็นรูป สัดส่วนเท่ากรอบเนื้อหาในสไลด์ (วางแล้วลากให้เต็มกรอบได้พอดี)
 function tableCanvas(m, scale = 3) {
@@ -1227,12 +1248,6 @@ $("dlBar").onclick = async () => {
 };
 const onPeer = () => { $("peerIn").setAttribute("aria-disabled", !$("showPeer").checked); renderChart(); saveHash(); };
 ["showPeer", "peerYtd"].forEach(id => { $(id).oninput = onPeer; $(id).onchange = onPeer; });
-$("copyT1img").onclick = () => copyTableImage(modelT1());
-$("dlT1img").onclick = async () => {
-  const a = document.createElement("a"); a.href = URL.createObjectURL(await tablePng(modelT1()));
-  a.download = "เทียบกับ_FIXEDSP_" + modelT1().cols.map(c => c.name).join("_").replace(/[\\/:*?"<>|]+/g, "-") + ".png"; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-};
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
 $("showTitle").onchange = () => { renderChart(); saveHash(); };
 function setLang(l) {
