@@ -259,7 +259,7 @@ def read_list():
     return out
 
 
-SEC_KEEP = ["fund_status", "comp_name_th", "proj_name_th", "proj_name_en", "regis_date", "invest_country_flag",
+SEC_KEEP = ["fund_status", "comp_name_th", "comp_name_en", "proj_name_th", "proj_name_en", "regis_date", "invest_country_flag",
             "investment_policy_desc", "management_style", "exchange_rate_protection_policy"]
 
 

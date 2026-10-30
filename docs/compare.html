@@ -137,6 +137,10 @@
   tr.perf th, tr.perf td { border-top: 3px solid var(--line); }
   td.num { white-space: nowrap; }
   .pos { color: var(--pos); } .neg { color: var(--neg); }
+  .titlebox { display: flex; flex-direction: column; gap: 8px; flex: 1 1 300px; min-width: 0; }
+  .titleopts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .chk input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
   .src { color: var(--muted); font-size: 12px; text-align: right; margin-top: 6px; }
   .dt tbody td { min-width: 150px; }
   .dt thead th { text-align: center; }
@@ -226,7 +230,13 @@
     <section>
       <div class="card">
         <div class="head">
-          <input id="title" placeholder="ชื่อกราฟบนรูป (ไม่ใส่ก็ได้)" aria-label="ชื่อกราฟบนรูป">
+          <div class="titlebox">
+            <input id="title" placeholder="หัวกราฟ (ไม่ใส่ = เปรียบเทียบผลตอบแทน)" aria-label="หัวกราฟ">
+            <div class="titleopts">
+              <label class="chk"><input type="checkbox" id="showTitle" checked> แสดงหัวกราฟ</label>
+              <div class="seg" id="lang" role="group" aria-label="ภาษาในกราฟและตาราง"><button data-l="th">ไทย</button><button data-l="en">EN</button></div>
+            </div>
+          </div>
           <div class="actions">
             <button class="btn primary" id="copy">Copy รูป</button>
             <button class="btn ghost" id="download">ดาวน์โหลด PNG</button>
@@ -279,6 +289,34 @@ const $ = (id) => document.getElementById(id);
 const PALETTE = ["#1b3560", "#5fb3a6", "#d0273e", "#e0a100", "#4f7fd6", "#8e5bb5", "#2f9e5b", "#7a8794"];
 const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const EN_MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+/* ภาษาในกราฟ ตารางผลตอบแทน และตารางเทียบ FIXEDSP (หน้าเว็บยังเป็นภาษาไทย) */
+let LANG = "th";
+const EN = {
+  "กองทุน": "Fund", "เปรียบเทียบผลตอบแทน": "Return comparison",
+  "ผลตอบแทนช่วงที่เลือก": "Return (selected period)", "ผลตอบแทนต่อปี": "Annualized return", "ลดลงสูงสุดจากจุดสูงสุด": "Max drawdown",
+  "บลจ.": "Asset management company", "นโยบายค่าเงิน": "FX hedging policy",
+  "สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน": "Eligible investments\n(government / corporate)",
+  "อายุเฉลี่ยของตราสาร": "Average portfolio duration", "อัตราผลตอบแทนที่คาดหวัง 1 ปี": "Expected 1-year return",
+  "ระยะเวลาที่ควรถือลงทุน": "Recommended holding period", "ค่าธรรมเนียมขาย (Front-End Fee)": "Front-end fee",
+  "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "Management fee + other expenses", "ระยะเวลารับเงินค่าขายคืน": "Redemption settlement",
+  "ทีมผู้เชี่ยวชาญดูแล": "Managed by expert team",
+  "ป้องกันทั้งหมด/เกือบทั้งหมด": "Fully / mostly hedged", "ป้องกันบางส่วน": "Partially hedged",
+  "ขึ้นอยู่กับดุลยพินิจของผู้จัดการกองทุน": "At fund manager's discretion", "ไม่ป้องกัน": "Unhedged", "ไม่มีความเสี่ยงค่าเงิน": "No FX risk",
+  "สามารถลงทุนในตราสารภาครัฐ": "Government debt only", "สามารถลงทุนได้ทั้งตราสารภาครัฐ และเอกชน": "Government and corporate debt",
+  "ไม่มี": "None", "ปัจจุบันไม่เรียกเก็บ": "Currently waived", "ตั้งแต่ 1 สัปดาห์ขึ้นไป": "1 week or longer",
+  "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล": "Actively rebalanced by an expert team",
+};
+const tr = (t) => {
+  if (LANG !== "en" || t == null || t === "") return t;
+  if (EN[t] != null) return EN[t];
+  return String(t).replace(/(\d+)\s*เดือน/g, (_, n) => `${n} month${+n > 1 ? "s" : ""}`).replace(/(\d+)\s*วัน/g, (_, n) => `${n} day${+n > 1 ? "s" : ""}`)
+    .replace(/ตั้งแต่\s*(\d+)\s*(month|day|week)s?\s*ขึ้นไป/, (_, n, u) => `${n} ${u}${+n > 1 ? "s" : ""} or longer`).trim();
+};
+const monLabel = (iso) => { const [y, m] = iso.split("-"); return LANG === "en" ? `${EN_MON[+m - 1]} ${y.slice(2)}` : `${TH_MON[+m - 1]} ${(+y + 543) % 100}`; };
+const dayLabel = (iso) => { const [, m, d] = iso.split("-"); return LANG === "en" ? `${+d} ${EN_MON[+m - 1]}` : `${+d} ${TH_MON[+m - 1]}`; };
+const amcShortEn = (s) => String(s || "").replace(/\s*(ASSET|FUND)\s+MANAGEMENT.*$/i, "").replace(/\s*(PUBLIC\s+)?COMPANY\s+LIMITED.*$/i, "")
+  .toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()).trim();
 const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
 const W = 1200, H = 560;
 const FONT = '"BLSBody", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
@@ -620,16 +658,20 @@ function draw(ctx, opts = {}) {
 
   ctx.save();
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
-  // หัวกราฟ: ชื่อ + ช่วงเวลา (เปลี่ยนตามช่วงที่เลือก)
-  const title = `${$("title").value.trim() || "ผลตอบแทนสะสม"}, ${thDate(si.s)} – ${thDate(si.e)}`;
-  ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  ctx.fillText(title, 24, 42);
+  // หัวกราฟ: ชื่อ + ช่วงเดือน (ซ่อนได้)
+  const showTitle = $("showTitle").checked;
+  if (showTitle) {
+    const span = monLabel(si.s) === monLabel(si.e) ? monLabel(si.s) : `${monLabel(si.s)} – ${monLabel(si.e)}`;
+    const title = `${$("title").value.trim() || tr("เปรียบเทียบผลตอบแทน")}, ${span}`;
+    ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(title, 24, 42);
+  }
   if (!ser.length) { ctx.restore(); layout = null; return; }
 
   // ท้ายเส้น = % อย่างเดียว · เผื่อที่ทางขวาให้พอดี
   ctx.font = `700 17px ${FONT_B}`;
   const R = Math.max(...ser.map(s => ctx.measureText(pct(s.pts.at(-1)[1], 2)).width)) + 26;
-  const L = 74, T = 76, B = 40, pw = W - L - R, ph = H - T - B;
+  const L = 74, T = showTitle ? 76 : 28, B = 40, pw = W - L - R, ph = H - T - B;
 
   const x0 = dnum(si.s), x1 = Math.max(dnum(si.e), x0 + 1);
   let y0 = Math.min(0, ...ser.flatMap(s => s.pts.map(p => p[1]))), y1 = Math.max(0, ...ser.flatMap(s => s.pts.map(p => p[1])));
@@ -666,7 +708,7 @@ function draw(ctx, opts = {}) {
     const x = Math.round(X(dnum(iso))) + 0.5;
     ctx.strokeStyle = "#9aa3af"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x, base + 5); ctx.stroke();
     const [yy, mm, dd] = iso.split("-");
-    ctx.fillStyle = MUTE; ctx.fillText(months < 1.5 ? `${+dd} ${TH_MON[+mm - 1]}` : every >= 12 ? `${+yy + 543}` : `${TH_MON[+mm - 1]} ${(+yy + 543) % 100}`, x, base + 9);
+    ctx.fillStyle = MUTE; ctx.fillText(months < 1.5 ? dayLabel(iso) : every >= 12 ? (LANG === "en" ? yy : `${+yy + 543}`) : monLabel(iso), x, base + 9);
   }
 
   // เส้น (FIXEDSP อยู่บนสุด)
@@ -682,7 +724,12 @@ function draw(ctx, opts = {}) {
   // ชื่อกองมุมบนซ้ายในกราฟ (ตัวหนาสีเดียวกับเส้น)
   ctx.textAlign = "left"; ctx.textBaseline = "middle";
   const leg = [...ser].sort((a, b) => b.pts.at(-1)[1] - a.pts.at(-1)[1]);   // เรียงตามผลตอบแทนท้ายเส้น (สูง → ต่ำ)
-  leg.forEach((s, i) => { ctx.font = `700 18px ${FONT_B}`; ctx.fillStyle = s.color; ctx.fillText(s.name, L + 18, T + 14 + i * 26); });
+  leg.forEach((s, i) => {
+    const y = T + 14 + i * 26;
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.hi ? 4.5 : 3; ctx.lineCap = "round";        // เส้นหน้าชื่อกอง (หนาเท่าเส้นจริง)
+    ctx.beginPath(); ctx.moveTo(L + 18, y); ctx.lineTo(L + 44, y); ctx.stroke();
+    ctx.font = `700 18px ${FONT_B}`; ctx.fillStyle = s.color; ctx.fillText(s.name, L + 54, y);
+  });
 
   // % ท้ายเส้น (สีเดียวกับเส้น กันซ้อนกัน)
   const tags = ser.map(s => ({ s, y: Y(s.pts.at(-1)[1]), x: X(s.pts.at(-1)[0]) })).sort((a, b) => a.y - b.y);
@@ -778,7 +825,7 @@ function renderInfos() {
 $("infos").addEventListener("click", (e) => { const p = e.target.closest(".pol"); if (p) p.classList.toggle("open"); });
 function renderPerf() {
   const fs = selected.map(byName).filter(Boolean);
-  $("perf").innerHTML = !fs.length ? "" : `<thead><tr><th>กองทุน</th><th>ผลตอบแทนช่วงที่เลือก</th><th>ผลตอบแทนต่อปี</th><th>ลดลงสูงสุดจากจุดสูงสุด</th></tr></thead><tbody>` +
+  $("perf").innerHTML = !fs.length ? "" : `<thead><tr>${["กองทุน", "ผลตอบแทนช่วงที่เลือก", "ผลตอบแทนต่อปี", "ลดลงสูงสุดจากจุดสูงสุด"].map(h => `<th>${tr(h)}</th>`).join("")}</tr></thead><tbody>` +
     fs.map(f => { const s = stats(slice(f)); const c = (v, t) => `<td class="${cls(v)}">${t}</td>`;
       return `<tr><td><i style="background:${colorOf(f.name)}"></i>${esc(f.name)}${ipoTag(f)}</td>` +
         (s ? c(s.ret, pct(s.ret)) + (s.ann != null ? c(s.ann, pct(s.ann)) : "<td>–</td>") + `<td class="${s.mdd < -0.005 ? "neg" : ""}">${s.mdd > -0.005 ? "0.00%" : pct(s.mdd)}</td>` : "<td>–</td><td>–</td><td>–</td>") +
@@ -858,7 +905,7 @@ function fxShort(f) {
 function secCell(f, label) {
   if (!f || f.custom) return "";
   switch (keyOf(label)) {
-    case keyOf("บลจ."): return amcShort(f.sec?.comp_name_th || f.info?.comp_name_th);
+    case keyOf("บลจ."): return LANG === "en" && f.sec?.comp_name_en ? amcShortEn(f.sec.comp_name_en) : amcShort(f.sec?.comp_name_th || f.info?.comp_name_th);
     case keyOf("นโยบายค่าเงิน"): return fxShort(f);
     case keyOf("ความเสี่ยง"): return f.risk ? String(f.risk) : "";
     case keyOf("สัดส่วนการลงทุนทั้งในและต่างประเทศ"): return COUNTRY[String(f.sec?.invest_country_flag || "")] || "";
@@ -895,11 +942,11 @@ const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyO
 function modelT1() {
   const others = selected.map(byName).filter(f => f && !isHero(f));
   const cols = [...others.map(f => ({ name: f.name, f })), { name: "FIXEDSP", f: null }];
-  return { cols, rows: ROWS_T1.map(l => [l, cols.map(c => cellFor(c.name, c.f, l))]) };
+  return { cols, rows: ROWS_T1.map(l => [tr(l), cols.map(c => tr(cellFor(c.name, c.f, l)))]) };
 }
 function tableHTML({ cols, rows }) {
   const lab = (l) => esc(l).replace(/\n/g, "<br>");
-  return `<thead><tr><th>กองทุน</th>${cols.map(c => `<th>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
+  return `<thead><tr><th>${tr("กองทุน")}</th>${cols.map(c => `<th>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
     `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
 }
 function renderTable() {
@@ -913,14 +960,14 @@ const SLIDE_T = { w: 878, h: 398, labelW: 340, headSize: 14, bodySize: 12 };
 const NAVY = "#1b3560", LINE = "#1f2a44";
 async function copyModel(m) {
   const txt = (v) => v || "";
-  const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
+  const tsv = [[tr("กองทุน"), ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
   const n = m.cols.length, colW = Math.floor((SLIDE_T.w - SLIDE_T.labelW) / Math.max(n, 1)), rowH = Math.floor(SLIDE_T.h / (m.rows.length + 1));
   const base = `border:1px solid ${LINE};padding:2pt 6pt;text-align:center;vertical-align:middle;height:${rowH}pt;`;
   const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;border-color:#fff ${LINE};`;
   const head = base + `width:${colW}pt;background:#fff;color:${NAVY};font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;`;
   const td = base + `width:${colW}pt;background:#fff;color:${NAVY};font-family:'BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.bodySize}pt;`;
   const html = `<table style="border-collapse:collapse;width:${SLIDE_T.w}pt"><colgroup><col style="width:${SLIDE_T.labelW}pt">${m.cols.map(() => `<col style="width:${colW}pt">`).join("")}</colgroup>` +
-    `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
+    `<tr><td style="${lab}">${tr("กองทุน")}</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
     m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
@@ -932,7 +979,7 @@ function tableCanvas(m, scale = 3) {
   const W2 = SLIDE_T.w, H2 = SLIDE_T.h, n = Math.max(m.cols.length, 1);
   const c = document.createElement("canvas"); c.width = W2 * scale; c.height = H2 * scale;
   const ctx = c.getContext("2d"); ctx.scale(scale, scale);
-  const rows = [["กองทุน", m.cols.map(c => c.name), true], ...m.rows.map(([l, vs]) => [l, vs, false])];
+  const rows = [[tr("กองทุน"), m.cols.map(c => c.name), true], ...m.rows.map(([l, vs]) => [l, vs, false])];
   // แถวที่หัวข้อ 2 บรรทัดสูงกว่าแถวอื่น (เหมือนในสไลด์)
   const wts = rows.map(([l]) => String(l).includes("\n") ? 1.6 : 1), unit = H2 / wts.reduce((a, b) => a + b, 0);
   const ys = wts.reduce((a, w) => (a.push(a.at(-1) + w * unit), a), [0]);
@@ -1029,6 +1076,13 @@ $("dlT1img").onclick = async () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 };
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
+$("showTitle").onchange = () => { renderChart(); saveHash(); };
+function setLang(l) {
+  LANG = l === "en" ? "en" : "th";
+  document.querySelectorAll("#lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === LANG));
+  try { localStorage.setItem("compare-lang", LANG); } catch (e) {}
+}
+$("lang").onclick = (e) => { const l = e.target.dataset.l; if (l) { setLang(l); update(); } };
 
 /* ---------- state ใน URL */
 function saveHash() {
@@ -1036,6 +1090,8 @@ function saveHash() {
   if (selected.length) p.set("f", selected.join("|"));
   if (range.q) p.set("q", range.q); else { p.set("s", range.s || ""); p.set("e", range.e || ""); }
   if ($("title").value.trim()) p.set("t", $("title").value.trim());
+  if (!$("showTitle").checked) p.set("nt", "1");
+  if (LANG === "en") p.set("l", "en");
   const cs = selected.filter(n => COLORS[n]).map(n => n + ":" + COLORS[n].slice(1));
   if (cs.length) p.set("c", cs.join("|"));
   if (!$("align").checked) p.set("a", "0");
@@ -1048,6 +1104,8 @@ function loadHash() {
   if (p.get("q")) range.q = p.get("q");
   else if (p.get("s") && p.get("e")) range = { s: p.get("s"), e: p.get("e"), q: null };
   if (p.get("t")) $("title").value = p.get("t");
+  if (p.get("nt") === "1") $("showTitle").checked = false;
+  if (p.get("l")) setLang(p.get("l"));
   for (const kv of (p.get("c") || "").split("|")) { const i = kv.lastIndexOf(":"); if (i > 0 && /^[0-9a-f]{6}$/i.test(kv.slice(i + 1))) COLORS[kv.slice(0, i)] = "#" + kv.slice(i + 1); }
   if (p.get("a") === "0") $("align").checked = false;
 }
@@ -1069,6 +1127,7 @@ function update() {
 /* ---------- เริ่ม */
 (async function init() {
   try { COLORS = JSON.parse(localStorage.getItem(COLOR_STORE) || "{}") || {}; } catch (e) { COLORS = {}; }
+  try { setLang(localStorage.getItem("compare-lang") || "th"); } catch (e) { setLang("th"); }
   CUSTOM = store.get().filter(c => c && c.name && Array.isArray(c.d)).map(c => ({ ...c, group: "FIXEDSP", custom: true, sec: {} }));
   try {
     const r = await fetch("compare/data.json?v=" + Date.now());
