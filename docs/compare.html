@@ -36,6 +36,17 @@
   header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
   header a { color: #fff; opacity: .85; font-size: 13px; }
   header .asof { background: rgba(255,255,255,.12); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+  .hdr-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .fx-wrap { position: relative; }
+  .hdrbtn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-head); font-weight: 700; font-size: 14px;
+            background: #fff; color: var(--navy); border: 0; border-radius: 9px; padding: 8px 14px; cursor: pointer; }
+  .hdrbtn:hover { background: #eef2f8; }
+  .hdrbtn svg { width: 17px; height: 17px; }
+  .hdrbtn.has { background: #e7f5ee; color: #0b6b3a; }
+  .upload.pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: 340px; margin: 0; border: 0; padding: 16px;
+                background: #fff; color: var(--ink); border-radius: 12px; box-shadow: 0 12px 32px rgba(16,24,40,.22); }
+  .upload.pop h2 { margin: 0 0 6px; font-size: 16px; color: var(--navy); }
+  @media (max-width: 720px) { .upload.pop { right: auto; left: 0; width: min(340px, 92vw); } }
 
   .layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; margin-top: 20px; align-items: start; }
   .card { background: var(--card); border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); padding: 16px; }
@@ -212,7 +223,25 @@
       <h1>เปรียบเทียบ FIXEDSP</h1>
       <p>เทียบผลตอบแทน FIXEDSP กับกองทุนตราสารหนี้</p>
     </div>
-    <div class="asof" id="asof">กำลังโหลด…</div>
+    <div class="hdr-right">
+      <div class="fx-wrap">
+        <button class="hdrbtn" id="fxOpen" aria-expanded="false" aria-controls="fxPop"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="fxLabel">เพิ่มข้อมูล FIXEDSP</span></button>
+      <div class="upload pop" id="fxPop" hidden>
+        <h2>เพิ่มข้อมูล FIXEDSP</h2>
+        <p>หน้าเว็บนี้เปิดเป็น Public จึงไม่ได้เก็บข้อมูล FIXEDSP ไว้ ดาวน์โหลดไฟล์จาก Tableau แล้วนำมาใส่ที่นี่</p>
+        <ol class="steps">
+          <li>เปิด <a href="https://tableau.sawasdee.brk1/#/views/All_model_performance/ModelPerformance?:iid=1" target="_blank" rel="noopener">Tableau · Model Performance</a></li>
+          <li>เลือกโมเดล <b>FIXEDSP</b></li>
+          <li>กด <span class="kbd"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="caret" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5z" fill="currentColor"/></svg></span> (Download) → <b>Data</b></li>
+          <li>กดปุ่มด้านล่าง แล้วเลือกไฟล์ที่ดาวน์โหลดมา</li>
+        </ol>
+        <input type="file" id="csvFile" accept=".csv,.txt,text/csv" hidden>
+        <button class="btn primary sm" id="csvBtn">เลือกไฟล์</button>
+        <p class="note-sm">หมายเหตุ: ข้อมูลอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหรือปิดหน้า</p>
+      </div>
+      </div>
+      <div class="asof" id="asof">กำลังโหลด…</div>
+    </div>
   </div>
   <nav class="wrap tabs" aria-label="หน้า"><a href="index.html">Top Funds Weekly Charts</a><a href="compare.html" aria-current="page">เปรียบเทียบ FIXEDSP</a></nav>
 </header>
@@ -228,19 +257,6 @@
       </div>
       <div id="list"></div>
       <div class="count" id="count"></div>
-      <div class="upload">
-        <h2>เพิ่มข้อมูล FIXEDSP</h2>
-        <p>หน้าเว็บนี้เปิดเป็น Public จึงไม่ได้เก็บข้อมูล FIXEDSP ไว้ ดาวน์โหลดไฟล์จาก Tableau แล้วนำมาใส่ที่นี่</p>
-        <ol class="steps">
-          <li>เปิด <a href="https://tableau.sawasdee.brk1/#/views/All_model_performance/ModelPerformance?:iid=1" target="_blank" rel="noopener">Tableau · Model Performance</a></li>
-          <li>เลือกโมเดล <b>FIXEDSP</b></li>
-          <li>กด <span class="kbd"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="caret" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5z" fill="currentColor"/></svg></span> (Download) → <b>Data</b></li>
-          <li>กดปุ่มด้านล่าง แล้วเลือกไฟล์ที่ดาวน์โหลดมา</li>
-        </ol>
-        <input type="file" id="csvFile" accept=".csv,.txt,text/csv" hidden>
-        <button class="btn primary sm" id="csvBtn">เลือกไฟล์</button>
-        <p class="note-sm">หมายเหตุ: ข้อมูลอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหรือปิดหน้า</p>
-      </div>
     </aside>
 
     <section>
@@ -454,6 +470,7 @@ async function onCSV(file) {
     }
     rebuildDates(); renderList(); update();
     toast(`เพิ่ม ${added.join(", ")}`);
+    fxStatus(); fxPop(false);
   } catch (e) { toast("อ่านไฟล์ไม่ได้: " + e.message); }
 }
 
@@ -563,6 +580,15 @@ $("count").addEventListener("click", (e) => {
 });
 $("align").onchange = update;
 $("csvBtn").onclick = () => $("csvFile").click();
+function fxPop(open) { $("fxPop").hidden = !open; $("fxOpen").setAttribute("aria-expanded", open); }
+$("fxOpen").onclick = (e) => { e.stopPropagation(); fxPop($("fxPop").hidden); };
+document.addEventListener("click", (e) => { if (!$("fxPop").hidden && !e.target.closest(".fx-wrap")) fxPop(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") fxPop(false); });
+function fxStatus() {
+  const f = CUSTOM[0];
+  $("fxOpen").classList.toggle("has", !!f);
+  $("fxLabel").textContent = f ? `FIXEDSP ถึง ${thDate(f.d.at(-1))}` : "เพิ่มข้อมูล FIXEDSP";
+}
 $("csvFile").onchange = (e) => { if (e.target.files[0]) onCSV(e.target.files[0]); e.target.value = ""; };
 
 /* ---------- ช่วงเวลา */
