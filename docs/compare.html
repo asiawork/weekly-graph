@@ -740,7 +740,7 @@ function annualModel() {
 function drawBars(ctx) {
   const m = annualModel();
   const INK = "#1f2937", MUTE = "#6b7280", GRID = "#e9ecf1";
-  ctx.save(); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.clearRect(0, 0, W, H);   // พื้นหลังโปร่งใส (วางบนสไลด์สีไหนก็ได้)
   layout = null;
   const showTitle = false;   // กราฟแท่งไม่มีหัวข้อ (ใช้หัวข้อในสไลด์)
   if (showTitle && m) {
