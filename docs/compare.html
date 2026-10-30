@@ -237,6 +237,10 @@
   .card:has(> #t1) { border-radius: 0; overflow: hidden; }
   .pastehint { font-size: 12.5px; color: var(--muted); font-weight: 400; margin-right: 4px; }
   @media (max-width: 700px) { .pastehint { display: none; } }
+  #t1 select.pick { font: inherit; color: #1b3560; background: transparent; border: 1px dashed #b8c2d3; border-radius: 6px;
+    padding: 3px 6px; text-align: center; text-align-last: center; cursor: pointer; max-width: 100%; }
+  #t1 select.pick:hover, #t1 select.pick:focus { border-style: solid; border-color: #1b3560; outline: none; }
+  @media print { #t1 select.pick { border: 0; appearance: none; } }
 </style>
 </head>
 <body>
@@ -1088,17 +1092,32 @@ const FIXEDSP_INFO = {
   "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล",
 };
 const FIXEDSP_MAP = Object.fromEntries(Object.entries(FIXEDSP_INFO).map(([k, v]) => [keyOf(k), v]));
-const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyOf(label)] || "") : secCell(f, label);
+// แถวที่ SEC ไม่มีข้อมูล ให้เลือกเองจาก dropdown ในตาราง (จำไว้ในเบราว์เซอร์ + ติดไปกับลิงก์)
+const PICK = {
+  "Average Credit Rating": ["AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-", "ต่ำกว่า BBB-"],
+  "ระยะเวลาที่ควรถือลงทุน": ["ตั้งแต่ 1 วันขึ้นไป", "ตั้งแต่ 1 สัปดาห์ขึ้นไป", "ตั้งแต่ 1 เดือนขึ้นไป", "ตั้งแต่ 3 เดือนขึ้นไป", "ตั้งแต่ 6 เดือนขึ้นไป", "ตั้งแต่ 1 ปีขึ้นไป"],
+};
+const MANUAL_STORE = "compare-manual";
+let MANUAL = {};
+try { MANUAL = JSON.parse(localStorage.getItem(MANUAL_STORE) || "{}") || {}; } catch (e) { MANUAL = {}; }
+const saveManual = () => { try { localStorage.setItem(MANUAL_STORE, JSON.stringify(MANUAL)); } catch (e) {} };
+const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyOf(label)] || "")
+  : (PICK[label] && MANUAL[name]?.[label]) || secCell(f, label);
 function modelT1() {
   const others = selected.map(byName).filter(f => f && !isHero(f));
   const cols = [...others.map(f => ({ name: f.name, f })), { name: "FIXEDSP", f: null }];
   return { cols, rows: ROWS_T1.map(l => [l, cols.map(c => cellFor(c.name, c.f, l))]) };
 }
+function pickHTML(name, label, v) {
+  const opts = PICK[label].includes(v) || !v ? PICK[label] : [v, ...PICK[label]];
+  return `<select class="pick" data-n="${esc(name)}" data-l="${esc(label)}" aria-label="${esc(label)} ${esc(name)}">` +
+    `<option value="">— เลือก —</option>${opts.map(o => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+}
 function tableHTML({ cols, rows }) {
   const lab = (l) => esc(l).replace(/\n/g, "<br>");
   const fx = (i) => isFxCol(cols[i]) ? ' class="fx"' : "";
   return `<thead><tr><th>กองทุน</th>${cols.map((c, i) => `<th${fx(i)}>${esc(c.name)}${c.f ? ipoTag(c.f) : ""}</th>`).join("")}</tr></thead>` +
-    `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map((v, i) => `<td${fx(i)}>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+    `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map((v, i) => `<td${fx(i)}>${PICK[l] && !isFxCol(cols[i]) ? pickHTML(cols[i].name, l, v) : esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
 }
 function renderTable() {
   renderInfos();
@@ -1248,6 +1267,14 @@ $("dlBar").onclick = async () => {
 };
 const onPeer = () => { $("peerIn").setAttribute("aria-disabled", !$("showPeer").checked); renderChart(); saveHash(); };
 ["showPeer", "peerYtd"].forEach(id => { $(id).oninput = onPeer; $(id).onchange = onPeer; });
+$("t1").addEventListener("change", (e) => {
+  const sel = e.target.closest("select.pick"); if (!sel) return;
+  const n = sel.dataset.n, l = sel.dataset.l;
+  MANUAL[n] = { ...(MANUAL[n] || {}) };
+  if (sel.value) MANUAL[n][l] = sel.value; else delete MANUAL[n][l];
+  if (!Object.keys(MANUAL[n]).length) delete MANUAL[n];
+  saveManual(); saveHash();
+});
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
 $("showTitle").onchange = () => { renderChart(); saveHash(); };
 function setLang(l) {
@@ -1270,6 +1297,8 @@ function saveHash() {
   if (!$("align").checked) p.set("a", "0");
   if (!$("showPeer").checked) p.set("np", "1");
   if (peerYtd() != null) p.set("py", peerYtd());
+  const man = {}; for (const n of selected) if (MANUAL[n]) man[n] = MANUAL[n];
+  if (Object.keys(man).length) p.set("m", JSON.stringify(man));
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) {}
 }
 function loadHash() {
@@ -1285,6 +1314,8 @@ function loadHash() {
   if (p.get("a") === "0") $("align").checked = false;
   if (p.get("np") === "1") { $("showPeer").checked = false; $("peerIn").setAttribute("aria-disabled", true); }
   if (p.get("py") && !isNaN(+p.get("py"))) $("peerYtd").value = p.get("py");
+  try { const man = JSON.parse(p.get("m") || "{}"); for (const [n, o] of Object.entries(man)) if (o && typeof o === "object")
+    MANUAL[n] = Object.fromEntries(Object.entries(o).filter(([l, v]) => PICK[l] && typeof v === "string" && v.length < 60)); saveManual(); } catch (e) {}
 }
 
 function update() {
