@@ -730,7 +730,7 @@ function drawBars(ctx) {
   const INK = "#1f2937", MUTE = "#6b7280", GRID = "#e9ecf1";
   ctx.save(); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
   layout = null;
-  const showTitle = $("showTitle").checked;
+  const showTitle = false;   // กราฟแท่งไม่มีหัวข้อ (ใช้หัวข้อในสไลด์)
   if (showTitle && m) {
     const end = LANG === "en" ? `${+m.ytdEnd.slice(8)} ${EN_MON[+m.ytdEnd.slice(5, 7) - 1]} ${m.ytdEnd.slice(0, 4)}` : thDate(m.ytdEnd);
     const t0 = $("title").value.trim() || (LANG === "en" ? "Calendar-Year Returns" : "ผลตอบแทนรายปี");
