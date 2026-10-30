@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "update = ดึงข้อมูลหน้าเปรียบเทียบ / selftest = พิมพ์ profile ดิบของ SEC ออกมาดู (ไม่บันทึก)"
+        description: "update = NAV อย่างเดียว (วันจันทร์ดึงข้อมูลตารางด้วย) / full = ดึงรายชื่อกอง + ข้อมูลตาราง + หนังสือชี้ชวนใหม่ทั้งหมด / selftest = พิมพ์ profile ดิบของ SEC ออกมาดู (ไม่บันทึก)"
         type: choice
-        options: [update, selftest]
+        options: [update, full, selftest]
         default: update
 
 permissions:
@@ -43,6 +43,8 @@ jobs:
         if: ${{ github.event.inputs.mode != 'selftest' }}
         env:
           SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+          COMPARE_MODE: ${{ github.event.inputs.mode == 'full' && 'full' || '' }}
+          COMPARE_URLS: ${{ github.event.inputs.mode == 'full' && '1' || '' }}
         run: python scripts/fetch_compare.py
 
       - name: Commit

@@ -104,7 +104,7 @@ def load_latest(url, label, latest=True):
     return rows
 
 
-def load_extras():
+def load_extras(fetch_urls=True):
     """(proj_id|class) -> ข้อมูลเสริมสำหรับตารางรายละเอียด"""
     ex = {}
 
@@ -143,7 +143,9 @@ def load_extras():
                 fn_row(row)
         except Exception as e:  # noqa: BLE001
             print(f"  ! ดึง {label} ไม่ได้: {e}")
-    # ลิงก์หนังสือชี้ชวน (fund factsheet) — endpoint นี้ไม่มีพารามิเตอร์ latest เก็บฉบับ as_of ล่าสุด
+    # ลิงก์หนังสือชี้ชวน (fund factsheet) — ลิงก์ไม่ค่อยเปลี่ยน ดึงเดือนละครั้ง หรือเมื่อมีกองใหม่ที่ยังไม่มีลิงก์
+    if not fetch_urls:
+        return ex
     try:
         for row in load_latest(URLS_URL, "factsheet urls", latest=False):
             link = row.get("pdf_factsheet") or row.get("amc_url_factsheet")
@@ -302,10 +304,79 @@ def stitch_old_class(info, start, series):
     return merged, note
 
 
+def write_payload(out_funds, today, missing):
+    last_days = [date.fromisoformat(x["s"]) + timedelta(days=sum(x["dd"])) for x in out_funds if x["s"]]
+    OUT.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "updated": today.isoformat(),
+        "nav_to": max(last_days).isoformat() if last_days else None,
+        "run_at": datetime.utcnow().isoformat() + "Z",
+        "years": YEARS,
+        "funds": out_funds,
+        "missing": missing,
+    }
+    (OUT / "data.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    print(f"ขนาดไฟล์ {(OUT / 'data.json').stat().st_size / 1e6:.1f} MB")
+    print(f"เขียน docs/compare/data.json ({len(out_funds)} กอง)")
+    if not any(x["s"] for x in out_funds):
+        raise SystemExit("ดึง NAV ไม่ได้เลยสักกอง - ลองรันแบบ selftest เพื่อดู response")
+
+
+def nav_series(info, start, today):
+    """ดึง NAV เพิ่ม (เฉพาะวันใหม่) แล้วคืน (วันที่เรียงแล้ว, series, warning)"""
+    warn = None
+    try:
+        _, warn = fn.fetch_series(info, start, today)
+    except Exception as e:  # noqa: BLE001
+        warn = str(e)[:300]
+        print(f"  ! {e}")
+    cache = fn.NAV_DIR / f"{fn.slug(info['name'])}.csv"
+    series = fn.read_cache(cache)
+    return cache, series, warn
+
+
+def pack(series, start):
+    series = {d: v for d, v in series.items() if d >= start}
+    days = sorted(series)
+    return {"s": days[0].isoformat() if days else None,
+            "dd": [(b - a).days for a, b in zip(days, days[1:])],
+            "v": [round(series[d], 4) for d in days]}, days
+
+
+def run_nav_only(prev, today, start):
+    """รายวัน: ใช้รายชื่อกองและข้อมูลในตาราง (SEC profile, ความเสี่ยง, ค่าธรรมเนียม, หนังสือชี้ชวน ฯลฯ) จากรอบก่อน
+    ดึงเฉพาะ NAV วันใหม่ของแต่ละกอง + อัปเดตขนาดกองทุนจาก NAV"""
+    out = []
+    for f in prev["funds"]:
+        info = f["info"]
+        cache, series, warn = nav_series(info, start, today)
+        packed, days = pack(series, start)
+        if days and warn and warn.startswith("API ตอบกลับมาแต่ไม่มี NAV"):
+            warn = None
+        x = dict(f.get("x") or {})
+        k = ckey(info["proj_id"], info["fund_class_name"])
+        if k in AUM:
+            x["aum"] = AUM[k]
+        out.append({**{kk: vv for kk, vv in f.items() if kk not in ("s", "dd", "v", "x", "warning")},
+                    "x": x, "warning": warn, **packed})
+    print(f"โหมดรายวัน: อัปเดต NAV {len(out)} กอง")
+    write_payload(out, today, prev.get("missing") or {})
+
+
 def main():
     if not fn.API_KEY:
         raise SystemExit("ไม่พบ SEC_API_KEY (ตั้งใน GitHub → Settings → Secrets → Actions)")
     selftest = "--selftest" in sys.argv
+    today = datetime.now(timezone(timedelta(hours=7))).date()   # เวลาไทย
+    start = today - timedelta(days=round(365.25 * YEARS) + 7)
+    # full = ดึงรายชื่อกอง + ข้อมูลในตารางใหม่ทั้งหมด (วันจันทร์) · nav = ดึงแค่ NAV (วันอื่น)
+    mode = os.getenv("COMPARE_MODE", "").strip().lower() or ("full" if today.weekday() == 0 else "nav")
+    prev_path = OUT / "data.json"
+    prev = json.loads(prev_path.read_text()) if prev_path.exists() else None
+    if mode == "nav" and not selftest and prev and prev.get("funds"):
+        run_nav_only(prev, today, start)
+        return
+    print("โหมดเต็ม: ดึงรายชื่อกองและข้อมูลในตารางใหม่")
 
     funds = read_list()
     profiles = fn.load_profiles()
@@ -323,9 +394,6 @@ def main():
             if fn.norm(r.get("fund_class_name")) == want:
                 return r
         return rows[0] if rows else {}
-
-    today = datetime.now(timezone(timedelta(hours=7))).date()   # เวลาไทย
-    start = today - timedelta(days=round(365.25 * YEARS) + 7)
 
     resolved, missing = {}, {}
     try:
@@ -400,7 +468,14 @@ def main():
                 break
         return
 
-    extras = load_extras()
+    prev_fs = {}
+    for f in (prev or {}).get("funds", []):
+        if (f.get("x") or {}).get("fs"):
+            prev_fs[ckey(f["info"]["proj_id"], f["info"]["fund_class_name"])] = f["x"]["fs"]
+    need_urls = (today.day <= 7 or os.getenv("COMPARE_URLS") == "1"
+                 or any(ckey(i["proj_id"], i["fund_class_name"]) not in prev_fs for i in resolved.values()))
+    print("ดึงลิงก์หนังสือชี้ชวน" if need_urls else "ใช้ลิงก์หนังสือชี้ชวนเดิม")
+    extras = load_extras(fetch_urls=need_urls)
     notes_path = DATA / "notes.json"
     notes = json.loads(notes_path.read_text()) if notes_path.exists() else {}
     funds.sort(key=lambda f: (f["group"], f["name"]))
@@ -437,7 +512,9 @@ def main():
             "info": info,
             "sec": scalar_fields(raw_profile(info)),
             "risk": risk.get(info["proj_id"]),
-            "x": {**({"fs": extras.get(ckey(info["proj_id"], ""), {}).get("fs")}
+            "x": {**({"fs": prev_fs[ckey(info["proj_id"], info["fund_class_name"])]}
+                     if ckey(info["proj_id"], info["fund_class_name"]) in prev_fs else {}),
+                  **({"fs": extras.get(ckey(info["proj_id"], ""), {}).get("fs")}
                      if extras.get(ckey(info["proj_id"], ""), {}).get("fs") else {}),
                   **extras.get(ckey(info["proj_id"], info["fund_class_name"]), {}),
                   **({"aum": AUM[ckey(info["proj_id"], info["fund_class_name"])]}
@@ -461,22 +538,8 @@ def main():
     notes = {k: v for k, v in notes.items() if any(x["name"] == k for x in out_funds)}
     print(f"ลบ NAV ของกองที่ไม่ใช้แล้ว {removed} ไฟล์")
     notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
-    OUT.mkdir(parents=True, exist_ok=True)
-    last_days = [date.fromisoformat(x["s"]) + timedelta(days=sum(x["dd"])) for x in out_funds if x["s"]]
-    payload = {
-        "updated": today.isoformat(),
-        "nav_to": max(last_days).isoformat() if last_days else None,
-        "run_at": datetime.utcnow().isoformat() + "Z",
-        "years": YEARS,
-        "funds": out_funds,
-        "missing": missing,
-    }
-    (OUT / "data.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
-    print(f"ขนาดไฟล์ {(OUT / 'data.json').stat().st_size / 1e6:.1f} MB")
-    print(f"เขียน docs/compare/data.json ({len(out_funds)} กอง)")
-
-    if not any(x["s"] for x in out_funds):
-        raise SystemExit("ดึง NAV ไม่ได้เลยสักกอง - ลองรันแบบ selftest เพื่อดู response")
+    notes_path.write_text(json.dumps(notes, ensure_ascii=False, indent=1))
+    write_payload(out_funds, today, missing)
 
 
 if __name__ == "__main__":
