@@ -308,8 +308,7 @@
             <div class="peerbox">
               <label class="chk"><input type="checkbox" id="showPeer" checked> แสดงค่าเฉลี่ยกลุ่ม Short Term General Bond</label>
               <span class="peerin" id="peerIn">YTD <span id="peerYear">2026</span>
-                <input type="number" id="peerYtd" step="0.01" placeholder="เช่น 0.73" aria-label="ค่าเฉลี่ยกลุ่ม YTD (%)"> %
-                ณ <input type="date" id="peerDate" aria-label="ข้อมูล ณ วันที่"></span>
+                <input type="number" id="peerYtd" step="0.01" placeholder="เช่น 0.73" aria-label="ค่าเฉลี่ยกลุ่ม YTD (%)"> %</span>
             </div></div>
           <div class="actions">
             <button class="btn primary" id="copyBar">Copy รูป</button>
@@ -319,9 +318,6 @@
         <div class="chart"><canvas id="cv2" width="1200" height="560"></canvas></div>
         <div class="tip">ผลตอบแทนแต่ละปีปฏิทิน (สิ้นปีก่อน → สิ้นปี) ปีล่าสุดเป็น YTD · ใช้สี หัวกราฟ และภาษาเดียวกับกราฟด้านบน</div>
       </div>
-
-      <h3>ผลตอบแทน <small id="tblNote"></small></h3>
-      <div class="tbl-wrap card" style="padding:0"><table id="perf" class="perf-t"></table></div>
 
       <h3>เทียบกับ FIXEDSP <span class="actions"><button class="btn primary sm" id="copyT1img" title="รูปขนาดพอดีกรอบเนื้อหาในสไลด์ ฟอนต์ไม่เพี้ยน">Copy เป็นรูป</button><button class="btn ghost sm" id="dlT1img" title="Insert → Pictures ใน PowerPoint ได้ขนาดพอดีกรอบสไลด์">ดาวน์โหลดรูป</button><button class="btn ghost sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง (แก้ได้)</button></span></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="t1" class="dt"></table></div>
@@ -736,10 +732,7 @@ function drawBars(ctx) {
     ctx.font = `700 26px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillText(title, 24, 42);
   }
   if (!m) { ctx.restore(); return; }
-  const pd = $("peerDate").value, pdOn = m.peer && m.peer.ytdOn && pd;
-  const foot = m.peer ? (LANG === "en"
-      ? `*Short Term General Bond category average (AIMC)${pdOn ? `, YTD as of ${+pd.slice(8)} ${EN_MON[+pd.slice(5, 7) - 1]} ${pd.slice(0, 4)}` : ""}`
-      : `*ค่าเฉลี่ยกลุ่มกองทุน Short Term General Bond (AIMC)${pdOn ? ` · YTD ณ ${thDate(pd)}` : ""}`) : "";
+  const foot = "";
   const L = 74, R = 24, T = showTitle ? 80 : 34, legendH = 40, B = 40 + legendH + (foot ? 24 : 0), pw = W - L - R, ph = H - T - B;
   const all = m.rows.flatMap(r => r.vals).filter(v => v != null);
   let y0 = Math.min(0, ...all), y1 = Math.max(0, ...all, 0.01);
@@ -1088,8 +1081,7 @@ function tableHTML({ cols, rows }) {
     `<tbody>${rows.map(([l, vs]) => `<tr><th>${lab(l)}</th>${vs.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
 }
 function renderTable() {
-  renderInfos(); renderPerf();
-  $("tblNote").textContent = selected.length ? `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(startInfo().e)}` : "";
+  renderInfos();
   $("t1").innerHTML = tableHTML(modelT1());
 }
 /* ขนาดกรอบตารางในสไลด์ 16:9 (13.33 × 7.5 นิ้ว = 960 × 540 pt) ตามสไลด์ "รายละเอียดพอร์ตกองทุนตราสารหนี้ระยะสั้น"
@@ -1224,7 +1216,7 @@ $("dlBar").onclick = async () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 };
 const onPeer = () => { $("peerIn").setAttribute("aria-disabled", !$("showPeer").checked); renderChart(); saveHash(); };
-["showPeer", "peerYtd", "peerDate"].forEach(id => { $(id).oninput = onPeer; $(id).onchange = onPeer; });
+["showPeer", "peerYtd"].forEach(id => { $(id).oninput = onPeer; $(id).onchange = onPeer; });
 $("copyT1img").onclick = () => copyTableImage(modelT1());
 $("dlT1img").onclick = async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(await tablePng(modelT1()));
@@ -1253,7 +1245,6 @@ function saveHash() {
   if (!$("align").checked) p.set("a", "0");
   if (!$("showPeer").checked) p.set("np", "1");
   if (peerYtd() != null) p.set("py", peerYtd());
-  if ($("peerDate").value) p.set("pd", $("peerDate").value);
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) {}
 }
 function loadHash() {
@@ -1269,7 +1260,6 @@ function loadHash() {
   if (p.get("a") === "0") $("align").checked = false;
   if (p.get("np") === "1") { $("showPeer").checked = false; $("peerIn").setAttribute("aria-disabled", true); }
   if (p.get("py") && !isNaN(+p.get("py"))) $("peerYtd").value = p.get("py");
-  if (/^\d{4}-\d\d-\d\d$/.test(p.get("pd") || "")) $("peerDate").value = p.get("pd");
 }
 
 function update() {
