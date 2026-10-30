@@ -7,9 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  @font-face { font-family: "BLSHead"; src: local("BLS Bold"), local("BLS-Bold"), local("BLSBold"), local("BLS Text Bold"), local("BLSText-Bold"); }
+  @font-face { font-family: "BLSBody"; src: local("BLS Text"), local("BLS-Text"), local("BLSText"), local("BLS Text Regular"), local("BLSText-Regular"); }
   :root {
-    --font-text: "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif;
-    --font-head: "BLS Bold", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif;
+    --font-text: "BLSBody", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif;
+    --font-head: "BLSHead", "BLS Bold", "IBM Plex Sans Thai", system-ui, sans-serif;
     --navy: #1b3560; --navy-2: #24467d; --red: #d0273e;
     --bg: #f4f6f9; --card: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
     --pos: #0f8a4b; --neg: #c62828;
@@ -18,7 +20,7 @@
   body { margin: 0; background: var(--bg); color: var(--ink);
          font-family: var(--font-text); font-size: 15px; }
   /* ฟอนต์บริษัท (ต้องติดตั้งในเครื่อง) — เครื่องที่ไม่มีจะใช้ IBM Plex Sans Thai แทน */
-  h1, h2, h3, h4, th, .tabs a, .btn, .grp-name, .sec-title, .docbtn, .tag { font-family: var(--font-head); }
+  h1, h2, h3, h4, th, .tabs a, .btn, .grp-name, .sec-title, .docbtn, .tag { font-family: var(--font-head); font-weight: 700; }
   header { background: var(--navy); color: #fff; padding: 22px 16px 26px; }
   /* แท็บสลับหน้า */
   header.has-tabs { padding-bottom: 0; }
@@ -129,7 +131,7 @@
   th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
   thead th { background: var(--navy); color: #fff; font-weight: 600; font-size: 13px; white-space: nowrap; }
   thead th i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; border: 1.5px solid #fff; }
-  tbody th { font-weight: 500; color: #fff; background: var(--navy); text-align: center; white-space: nowrap; width: 1%; border-bottom: 1px solid #fff; line-height: 1.35; }
+  tbody th { font-weight: 700; color: #fff; background: var(--navy); text-align: center; white-space: nowrap; width: 1%; border-bottom: 1px solid #fff; line-height: 1.35; }
   thead th:first-child { text-align: center; }
   td { text-align: center; }
   tr.perf th, tr.perf td { border-top: 3px solid var(--line); }
@@ -249,7 +251,7 @@
       <h3>ผลตอบแทน <small id="tblNote"></small></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="perf" class="perf-t"></table></div>
 
-      <h3>เทียบกับ FIXEDSP <button class="btn ghost sm" id="copyT1">Copy ตาราง</button></h3>
+      <h3>เทียบกับ FIXEDSP <span class="actions"><button class="btn primary sm" id="copyT1img" title="รูปขนาดพอดีกรอบเนื้อหาในสไลด์ ฟอนต์ไม่เพี้ยน">Copy เป็นรูป</button><button class="btn ghost sm" id="copyT1" title="วางแล้วแก้ข้อความในตารางได้">Copy ตาราง (แก้ได้)</button></span></h3>
       <div class="tbl-wrap card" style="padding:0"><table id="t1" class="dt"></table></div>
 
       <h3>ข้อมูลกองทุน</h3>
@@ -278,8 +280,8 @@ const MAX_SEL = PALETTE.length;
 const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
 const W = 1200, H = 560;
-const FONT = '"BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
-const FONT_B = '"BLS Bold", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
+const FONT = '"BLSBody", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
+const FONT_B = '"BLSHead", "BLS Bold", "IBM Plex Sans Thai", system-ui, sans-serif';
 
 let DATA = { funds: [], missing: {} };
 let CUSTOM = [];          // เส้นจาก CSV
@@ -884,17 +886,80 @@ function renderTable() {
   $("tblNote").textContent = selected.length ? `ผลตอบแทนคิดในช่วง ${thDate(startInfo().s)} – ${thDate(range.e)}` : "";
   $("t1").innerHTML = tableHTML(modelT1());
 }
+/* ขนาดกรอบตารางในสไลด์ 16:9 (13.33 × 7.5 นิ้ว = 960 × 540 pt) ตามสไลด์ "รายละเอียดพอร์ตกองทุนตราสารหนี้ระยะสั้น"
+   ตารางกว้าง 878 pt สูง 398 pt · คอลัมน์หัวข้อกว้าง 340 pt · หัวข้อ 14 pt ตัวหนา · เนื้อหา 12 pt */
+const SLIDE_T = { w: 878, h: 398, labelW: 340, headSize: 14, bodySize: 12 };
+const NAVY = "#1b3560", LINE = "#1f2a44";
 async function copyModel(m) {
   const txt = (v) => v || "";
   const tsv = [["กองทุน", ...m.cols.map(c => c.name)].join("\t"), ...m.rows.map(([l, vs]) => [l.replace(/\n/g, " "), ...vs.map(txt)].join("\t"))].join("\n");
-  const td = "border:1px solid #d1d5db;padding:4px 8px;font-family:'BLS Text',Tahoma,sans-serif;font-size:11pt;text-align:center;";
-  const hd = td + "background:#1b3560;color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;";
-  const html = `<table style="border-collapse:collapse"><tr><th style="${hd}">กองทุน</th>${m.cols.map(c => `<th style="${td}font-weight:bold">${esc(c.name)}</th>`).join("")}</tr>` +
-    m.rows.map(([l, vs]) => `<tr><td style="${hd}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
+  const n = m.cols.length, colW = Math.floor((SLIDE_T.w - SLIDE_T.labelW) / Math.max(n, 1)), rowH = Math.floor(SLIDE_T.h / (m.rows.length + 1));
+  const base = `border:1px solid ${LINE};padding:2pt 6pt;text-align:center;vertical-align:middle;height:${rowH}pt;`;
+  const lab = base + `width:${SLIDE_T.labelW}pt;background:${NAVY};color:#fff;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;border-color:#fff ${LINE};`;
+  const head = base + `width:${colW}pt;background:#fff;color:#000;font-weight:bold;font-family:'BLS Bold','BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.headSize}pt;`;
+  const td = base + `width:${colW}pt;background:#fff;color:#000;font-family:'BLS Text',Tahoma,sans-serif;font-size:${SLIDE_T.bodySize}pt;`;
+  const html = `<table style="border-collapse:collapse;width:${SLIDE_T.w}pt"><colgroup><col style="width:${SLIDE_T.labelW}pt">${m.cols.map(() => `<col style="width:${colW}pt">`).join("")}</colgroup>` +
+    `<tr><td style="${lab}">กองทุน</td>${m.cols.map(c => `<td style="${head}">${esc(c.name)}</td>`).join("")}</tr>` +
+    m.rows.map(([l, vs]) => `<tr><td style="${lab}">${esc(l).replace(/\n/g, "<br>")}</td>${vs.map(v => `<td style="${td}">${esc(txt(v))}</td>`).join("")}</tr>`).join("") + `</table>`;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([tsv], { type: "text/plain" }) })]);
   } catch (e) { await navigator.clipboard.writeText(tsv); }
-  toast("Copy ตารางแล้ว วางใน PowerPoint / Excel ได้เลย");
+  toast("Copy ตารางแล้ว วางใน PowerPoint ได้เลย");
+}
+// วาดตารางเป็นรูป สัดส่วนเท่ากรอบเนื้อหาในสไลด์ (วางแล้วลากให้เต็มกรอบได้พอดี)
+function tableCanvas(m, scale = 3) {
+  const W2 = SLIDE_T.w, H2 = SLIDE_T.h, n = Math.max(m.cols.length, 1);
+  const c = document.createElement("canvas"); c.width = W2 * scale; c.height = H2 * scale;
+  const ctx = c.getContext("2d"); ctx.scale(scale, scale);
+  const rows = [["กองทุน", m.cols.map(c => c.name), true], ...m.rows.map(([l, vs]) => [l, vs, false])];
+  // แถวที่หัวข้อ 2 บรรทัดสูงกว่าแถวอื่น (เหมือนในสไลด์)
+  const wts = rows.map(([l]) => String(l).includes("\n") ? 1.6 : 1), unit = H2 / wts.reduce((a, b) => a + b, 0);
+  const ys = wts.reduce((a, w) => (a.push(a.at(-1) + w * unit), a), [0]);
+  let rh = unit; const lw = SLIDE_T.labelW, cw = (W2 - lw) / n;
+  const fsH = SLIDE_T.headSize, fsB = SLIDE_T.bodySize;
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W2, H2);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  // ตัดบรรทัด: ตาม \n ก่อน แล้วตัดหลัง "/" หรือช่องว่างถ้ายาวเกินช่อง
+  const wrap = (text, maxW) => {
+    const out = [];
+    for (const para of String(text || "").split("\n")) {
+      if (ctx.measureText(para).width <= maxW) { out.push(para); continue; }
+      const parts = para.split(/(?<=\/)|(?<= )/); let line = "";
+      for (const p of parts) { if (line && ctx.measureText(line + p).width > maxW) { out.push(line.trim()); line = p; } else line += p; }
+      if (line) out.push(line.trim());
+    }
+    return out;
+  };
+  const cell = (text, x, y, w, size, font, color) => {
+    let sz = size, lines;
+    for (;;) { ctx.font = `${font === "b" ? 700 : 400} ${sz}px ${font === "b" ? FONT_B : FONT}`; lines = wrap(text, w - 10);
+      if (lines.length * sz * 1.25 <= rh - 4 || sz <= 8) break; sz -= 0.5; }
+    ctx.fillStyle = color;
+    lines.forEach((ln, i) => ctx.fillText(ln, x + w / 2, y + rh / 2 + (i - (lines.length - 1) / 2) * sz * 1.25 + 0.5));
+  };
+  rows.forEach(([label, vals, isHead], r) => {
+    const y = ys[r]; rh = ys[r + 1] - ys[r];
+    ctx.fillStyle = NAVY; ctx.fillRect(0, y, lw, rh);
+    cell(label, 0, y, lw, fsH, "b", "#fff");
+    vals.forEach((v, i) => cell(v, lw + i * cw, y, cw, isHead ? fsH : fsB, isHead ? "b" : "t", "#111"));
+  });
+  // เส้นตาราง: เส้นขาวคั่นแถวในคอลัมน์หัวข้อ, เส้นเทาคั่นแถวในเนื้อหา, เส้นเข้มคั่นคอลัมน์และใต้หัวตาราง
+  ctx.lineWidth = 1;
+  for (let r = 1; r < rows.length; r++) {
+    const y = Math.round(ys[r]) + 0.5;
+    ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(lw, y); ctx.stroke();
+    ctx.strokeStyle = r === 1 ? LINE : "#e3e6eb"; ctx.beginPath(); ctx.moveTo(lw, y); ctx.lineTo(W2, y); ctx.stroke();
+  }
+  ctx.strokeStyle = LINE;
+  for (let i = 1; i < n; i++) { const x = Math.round(lw + i * cw) + 0.5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H2); ctx.stroke(); }
+  ctx.strokeRect(0.5, 0.5, W2 - 1, H2 - 1);
+  return c;
+}
+async function copyTableImage(m) {
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": toBlob(tableCanvas(m)) })]);
+    toast("Copy รูปตารางแล้ว วางในสไลด์แล้วลากให้เต็มกรอบเนื้อหาได้พอดี");
+  } catch (e) { toast("เบราว์เซอร์นี้ copy รูปไม่ได้"); }
 }
 /* ---------- ปุ่ม */
 function fileName(ext) { return (($("title").value.trim() || selected.join("_")) || "compare").replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80) + `_${range.s}_${range.e}.${ext}`; }
@@ -922,6 +987,7 @@ $("print").onclick = () => {
   setTimeout(() => { window.print(); document.title = old; }, 150);
 };
 $("copyT1").onclick = () => copyModel(modelT1());
+$("copyT1img").onclick = () => copyTableImage(modelT1());
 $("title").addEventListener("input", () => { renderChart(); saveHash(); });
 
 /* ---------- state ใน URL */
@@ -979,7 +1045,9 @@ function update() {
   loadHash();
   if (!selected.length && CUSTOM.length) selected = [CUSTOM[0].name];
   rebuildDates(); renderList(); update();
-  if (document.fonts) document.fonts.ready.then(renderChart);
+  // โหลดฟอนต์บริษัทก่อนวาดกราฟ (ฟอนต์ใน canvas ต้องโหลดเสร็จก่อนถึงจะใช้ได้)
+  if (document.fonts) Promise.all(["700 16px BLSHead", "16px BLSBody", "16px 'IBM Plex Sans Thai'"].map(f => document.fonts.load(f).catch(() => {})))
+    .then(() => document.fonts.ready).then(renderChart);
 })();
 </script>
 </body>
