@@ -42,7 +42,9 @@
   .chip:hover { border-color: var(--navy-2); }
   .chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
   /* ผลตอบแทนตั้งแต่แนะนำในปุ่มกอง */
-  .chip .ret { margin-left: 6px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chip:has(.ret) { display: inline-flex; flex-direction: column; align-items: center; gap: 1px;
+                   border-radius: 14px; padding: 6px 14px; line-height: 1.25; }
+  .chip .ret { display: block; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .chip .ret.pos { color: var(--pos); } .chip .ret.neg { color: var(--neg); }
   .chip[aria-pressed="true"] .ret.pos { color: #8ee6b4; }
   .chip[aria-pressed="true"] .ret.neg { color: #ffa3a3; }
@@ -555,7 +557,7 @@ async function init() {
     const r = f.returns && f.returns.since_rec;
     const ret = (r == null || !isFinite(r)) ? "" :
       `<span class="ret ${r >= 0 ? "pos" : "neg"}" title="ผลตอบแทนตั้งแต่แนะนำ">${r >= 0 ? "+" : ""}${r.toFixed(2)}%</span>`;
-    return `<button class="chip" data-name="${f.name}" aria-pressed="false">${f.name}${ret}${warn ? '<span class="dot" title="มีจุดต้องเช็ค"></span>' : ""}</button>`;
+    return `<button class="chip" data-name="${f.name}" aria-pressed="false"><span class="nm">${f.name}${warn ? '<span class="dot" title="มีจุดต้องเช็ค"></span>' : ""}</span>${ret}</button>`;
   }).join("");
   $("chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) select(b.dataset.name); });
 
