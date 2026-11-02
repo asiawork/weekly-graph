@@ -201,8 +201,10 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
 
     # แกน y ด้านขวา
     ax.yaxis.tick_right()
-    ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(5))
-    ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:.0f}%"))
+    # grid ลงเลขกลมเท่านั้น (1/2/5/10…) — กันป้ายปัดเศษผิด เช่น -2.5% แสดงเป็น "-2%"
+    ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(7, steps=[1, 2, 5, 10]))
+    ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(
+        lambda v, _: f"{v:.0f}%" if abs(v - round(v)) < 1e-9 else f"{v:g}%"))
 
     # แกน x ปรับตามช่วงเวลา
     span = (x_end - start).days
@@ -211,13 +213,13 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
     elif span <= 200:
         ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
     elif span <= 420:
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 3, 5, 7, 9, 11)))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
     else:
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 4, 7, 10)))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
     ax.tick_params(colors=MUTED, length=0, labelsize=6.5, pad=3)
     ax.set_xlim(start, x_end)
 
@@ -234,13 +236,28 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
                     fontsize=7, fontweight="bold", color="white", annotation_clip=False, zorder=10 + z,
                     bbox=dict(boxstyle="round,pad=0.35,rounding_size=0.25", fc=color, ec="none"))
 
-    # ซ่อนตัวเลขแกนที่ทับ tag
+    # จุดเริ่ม (วันแนะนำ) + ป้ายวันที่ใต้แกนซ้ายสุด
+    ax.plot([start], [0], marker="o", ms=3.2, color=NAVY, mec="white", mew=0.8,
+            zorder=6, clip_on=False)
+    lbl = f"Rec. {start.day} {start:%b %Y}"
+    start_txt = ax.annotate(lbl, xy=(0, 0), xycoords="axes fraction", xytext=(0, -3),
+                            textcoords="offset points", ha="left", va="top",
+                            fontsize=6.5, fontweight="bold", color=NAVY, annotation_clip=False)
+
+    # ซ่อนเฉพาะตัวเลขแกนที่ทับ tag / ป้ายวันแนะนำจริงๆ
+    fig.subplots_adjust(left=0.015, right=0.90, top=0.97, bottom=0.10)
     fig.canvas.draw()
-    for t, val in zip(ax.get_yticklabels(), ax.get_yticks()):
-        if any(abs(val - v) < rng * 0.09 for v, _, _ in tags):
+    r = fig.canvas.get_renderer()
+    tag_boxes = [c.get_bbox_patch().get_window_extent(r) for c in ax.texts if c.get_bbox_patch()]
+    for t in ax.get_yticklabels():
+        bb = t.get_window_extent(r).expanded(1.0, 1.3)
+        if any(bb.overlaps(b) for b in tag_boxes):
+            t.set_visible(False)
+    sb = start_txt.get_window_extent(r).expanded(1.15, 1.0)
+    for t in ax.get_xticklabels():
+        if t.get_text() and t.get_window_extent(r).overlaps(sb):
             t.set_visible(False)
 
-    fig.subplots_adjust(left=0.015, right=0.90, top=0.97, bottom=0.10)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=DPI, facecolor="white")
 
