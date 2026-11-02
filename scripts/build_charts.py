@@ -239,7 +239,7 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
     # จุดเริ่ม (วันแนะนำ) + ป้ายวันที่ใต้แกนซ้ายสุด
     ax.plot([start], [0], marker="o", ms=3.2, color=NAVY, mec="white", mew=0.8,
             zorder=6, clip_on=False)
-    lbl = f"Rec. {start.day} {start:%b %Y}"
+    lbl = f"{start.day} {start:%b %Y}"
     start_txt = ax.annotate(lbl, xy=(0, 0), xycoords="axes fraction", xytext=(0, -3),
                             textcoords="offset points", ha="left", va="top",
                             fontsize=6.5, fontweight="bold", color=NAVY, annotation_clip=False)
@@ -253,7 +253,7 @@ def draw(fund, series: dict, start: pd.Timestamp, path: Path):
         bb = t.get_window_extent(r).expanded(1.0, 1.3)
         if any(bb.overlaps(b) for b in tag_boxes):
             t.set_visible(False)
-    sb = start_txt.get_window_extent(r).expanded(1.15, 1.0)
+    sb = start_txt.get_window_extent(r).expanded(1.6, 1.0)
     for t in ax.get_xticklabels():
         if t.get_text() and t.get_window_extent(r).overlaps(sb):
             t.set_visible(False)

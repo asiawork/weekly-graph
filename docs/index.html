@@ -12,9 +12,15 @@
     --bg: #f4f6f9; --card: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
     --pos: #0f8a4b; --neg: #c62828;
   }
+  /* ฟอนต์บริษัท: ใช้ BLS เฉพาะเครื่องที่ติดตั้งไว้ (ไม่ได้แนบไฟล์ฟอนต์ใน repo) · เครื่องอื่นใช้ IBM Plex Sans Thai */
+  :root { --f-body: "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif;
+          --f-head: "BLS Bold", "IBM Plex Sans Thai", system-ui, sans-serif; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
-         font-family: "IBM Plex Sans Thai", system-ui, sans-serif; font-size: 15px; }
+         font-family: var(--f-body); font-size: 15px; }
+  /* หัวข้อ = BLS Bold · ปิดตัวหนาสังเคราะห์ ไม่ให้ BLS Bold ถูกทำหนาซ้ำ */
+  h1, h2, h3 { font-family: var(--f-head); font-synthesis: none; }
+  h3 .btn { font-family: var(--f-body); font-synthesis: initial; }
   header { background: var(--navy); color: #fff; padding: 22px 16px 26px; }
   /* แท็บสลับหน้า */
   header.has-tabs { padding-bottom: 0; }
@@ -245,9 +251,19 @@ async function copyImage() {
 const LV = { lines: [], show: false, edited: false, hover: null, drag: null, down: null, seq: 0 };
 /* ชื่อกองบนกราฟ: ค่าเริ่มต้น = ซ่อน · ตำแหน่ง/ขนาดเท่าที่ build_charts.py เคยวาด (มุมซ้ายบนกรอบกราฟ, 8.5pt @300dpi) */
 const NAME = { show: false };
-const NAME_FONT = 'bold 35px "DejaVu Sans", Verdana, Arial, sans-serif';
+/* ฟอนต์บนกราฟ (ติดไปกับรูปตอน Copy): BLS ถ้าเครื่องนี้มี ไม่มีก็ใช้ฟอนต์เดิม */
+function hasLocalFont(fam) {
+  const c = document.createElement("canvas").getContext("2d"), t = "mmmmwwwwlli กขค 0123";
+  return ["monospace", "serif"].some((b) => {
+    c.font = `40px ${b}`; const w0 = c.measureText(t).width;
+    c.font = `40px "${fam}", ${b}`; return c.measureText(t).width !== w0;
+  });
+}
+const NAME_FONT = hasLocalFont("BLS Bold")
+  ? '35px "BLS Bold"' : 'bold 35px "DejaVu Sans", Verdana, Arial, sans-serif';
 const LV_COLOR = { res: "#c62828", sup: "#0f8a4b", add: "#1b3560" };
-const LV_FONT = '600 27px "IBM Plex Sans Thai", "DejaVu Sans", sans-serif';
+const LV_FONT = hasLocalFont("BLS Text")
+  ? '600 27px "BLS Text", "IBM Plex Sans Thai", sans-serif' : '600 27px "IBM Plex Sans Thai", "DejaVu Sans", sans-serif';
 const lvKey = (name) => "wg-levels:" + name;
 const fmtNav = (v) => v.toFixed(4);
 
