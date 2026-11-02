@@ -38,7 +38,9 @@
 
   /* ปุ่มกองกว้างเท่ากันทุกปุ่ม · ขึ้นแถวใหม่เองเมื่อจอแคบ */
   .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin: 20px 0 16px; }
-  .chips .chip { width: 100%; white-space: nowrap; }
+  .chips .chip { width: 100%; height: 100%; white-space: nowrap; }
+  /* ชื่อกองในปุ่ม = BLS Bold (เครื่องที่ไม่มีใช้ IBM Plex ตัวหนา) */
+  .chip .nm { font-family: var(--f-head); font-weight: 600; font-synthesis: none; }
   .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px;
           padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
   .chip:hover { border-color: var(--navy-2); }
