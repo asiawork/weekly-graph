@@ -36,7 +36,9 @@
   header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
   header .asof { background: rgba(255,255,255,.12); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
 
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
+  /* ปุ่มกองกว้างเท่ากันทุกปุ่ม · ขึ้นแถวใหม่เองเมื่อจอแคบ */
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin: 20px 0 16px; }
+  .chips .chip { width: 100%; white-space: nowrap; }
   .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px;
           padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
   .chip:hover { border-color: var(--navy-2); }
