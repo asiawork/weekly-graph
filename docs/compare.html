@@ -390,7 +390,7 @@ const tr = (t) => LANG === "en" && EN[t] != null ? EN[t] : t;
 const monLabel = (iso) => { const [y, m] = iso.split("-"); return LANG === "en" ? `${EN_MON[+m - 1]} ${y.slice(2)}` : `${TH_MON[+m - 1]} ${(+y + 543) % 100}`; };
 const dayLabel = (iso) => { const [, m, d] = iso.split("-"); return LANG === "en" ? `${+d} ${EN_MON[+m - 1]}` : `${+d} ${TH_MON[+m - 1]}`; };
 const STORE = "compare-custom-v1", COLOR_STORE = "compare-colors-v1";
-const W = 1200, H = 560;
+let W = 1200, H = 560;   // H เปลี่ยนชั่วคราวได้ตอนทำรูปให้พอดีกรอบสไลด์
 const FONT = '"BLSBody", "BLS Text", "IBM Plex Sans Thai", system-ui, sans-serif';
 const FONT_B = '"BLSHead", "BLS Bold", "IBM Plex Sans Thai", system-ui, sans-serif';
 
@@ -926,9 +926,12 @@ function exportBars(scale = 2) {
   const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
   const ctx = c.getContext("2d"); ctx.scale(scale, scale); drawBars(ctx); return c;
 }
-function exportCanvas(scale = 2) {
-  const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
-  const ctx = c.getContext("2d"); ctx.scale(scale, scale); draw(ctx); return c;
+function exportCanvas(scale = 2, h = H) {
+  const h0 = H; H = h;
+  try {
+    const c = document.createElement("canvas"); c.width = W * scale; c.height = H * scale;
+    const ctx = c.getContext("2d"); ctx.scale(scale, scale); draw(ctx); return c;
+  } finally { H = h0; }
 }
 const toBlob = (c) => new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error("toBlob")), "image/png"));
 
@@ -1307,6 +1310,15 @@ async function swapPicture(zip, path, doc, canvas, name) {
   const cx = +xfrmExt.getAttribute("cx");
   xfrmExt.setAttribute("cy", String(Math.round(cx * canvas.height / canvas.width)));
 }
+// ความสูงรูป (px ที่กว้าง W) ให้รูปแรกในสไลด์ยาวลงไปถึงขอบล่างสไลด์พอดี
+async function fillHeight(zip, doc) {
+  const pres = xmlOf(await zip.file("ppt/presentation.xml").async("string"));
+  const sldCy = +pres.getElementsByTagNameNS(NS_P, "sldSz")[0].getAttribute("cy");
+  const pic = doc.getElementsByTagNameNS(NS_P, "pic")[0]; if (!pic) return H;
+  const xf = pic.getElementsByTagNameNS(NS_A, "xfrm")[0];
+  const y = +xf.getElementsByTagNameNS(NS_A, "off")[0].getAttribute("y"), cx = +xf.getElementsByTagNameNS(NS_A, "ext")[0].getAttribute("cx");
+  return Math.max(300, Math.round(W * (sldCy - y) / cx));
+}
 // แทนชื่อกองเดิมด้วยชื่อใหม่ในทุกข้อความของสไลด์
 function swapNames(doc, oldName, newName) {
   if (!oldName) return;
@@ -1380,7 +1392,7 @@ async function buildPptx(file) {
   [0, 1, 3].forEach(i => swapNames(docs[i], oldNames, names));
   [2, 3].forEach(i => swapAsOf(docs[i]));
   const stamp = Date.now().toString(36);
-  await swapPicture(zip, paths[1], docs[1], exportCanvas(3), "compare_line_" + stamp);
+  await swapPicture(zip, paths[1], docs[1], exportCanvas(3, await fillHeight(zip, docs[1])), "compare_line_" + stamp);
   await swapPicture(zip, paths[2], docs[2], exportBars(3), "compare_bar_" + stamp);
   docs.forEach((d, i) => zip.file(paths[i], strOf(d)));
   await saveZip(zip, `Review Portfolio กองทุนตราสารหนี้ ${names.replace(/ \/ /g, ", ")}.pptx`);
@@ -1396,12 +1408,12 @@ async function saveZip(zip, name) {
    สไลด์อื่นคงไว้ตามแม่แบบ */
 const heroSeries = () => allSeries().find(isHero);
 // วาดกราฟของ FIXEDSP อย่างเดียว ช่วง 3 ปี โดยไม่แตะสิ่งที่เลือกไว้บนหน้า
-function spCharts() {
+function spCharts(lineH = H) {
   const hero = heroSeries(), keep = { selected, range: { ...range }, title: $("title").value };
   try {
     selected = [hero.name]; applyQuick("3Y", true);
     $("title").value = LANG === "en" ? "Cumulative Return" : "ผลตอบแทนสะสม";
-    return { line: exportCanvas(3), bar: exportBars(3), ytdEnd: annualModel()?.ytdEnd || hero.d.at(-1) };
+    return { line: exportCanvas(3, lineH), bar: exportBars(3), ytdEnd: annualModel()?.ytdEnd || hero.d.at(-1) };
   } finally { selected = keep.selected; range = keep.range; $("title").value = keep.title; }
 }
 // แทนกราฟ PowerPoint (chart) ตัวแรกในสไลด์ด้วยรูป ในกรอบเดิม (คงสัดส่วนรูป)
@@ -1431,7 +1443,7 @@ async function buildSpPptx(file) {
   const paths = await slidePaths(zip);
   if (paths.length < 6) throw new Error("แม่แบบ SP ต้องมีสไลด์กราฟแท่งเป็นสไลด์ที่ 5 และกราฟเส้นเป็นสไลด์ที่ 6");
   const [bar, line] = await Promise.all([4, 5].map(async i => xmlOf(await zip.file(paths[i]).async("string"))));
-  const c = spCharts(), stamp = Date.now().toString(36);
+  const c = spCharts(await fillHeight(zip, line)), stamp = Date.now().toString(36);
   await chartToPicture(zip, paths[4], bar, c.bar, "sp_bar_" + stamp);
   await swapPicture(zip, paths[5], line, c.line, "sp_line_" + stamp);
   swapAsOf(bar); swapAsOf(line);
