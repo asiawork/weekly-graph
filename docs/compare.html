@@ -1110,7 +1110,7 @@ const FIXEDSP_INFO = {
   "ค่าธรรมเนียมขาย (Front-End Fee)": "ปัจจุบันไม่เรียกเก็บ",
   "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "0.22%",
   "ระยะเวลารับเงินค่าขายคืน": "T+2**",
-  "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตอัตโนมัติตามสถานการณ์ มีทีมผู้เชี่ยวชาญดูแล",
+  "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล",
 };
 const FIXEDSP_MAP = Object.fromEntries(Object.entries(FIXEDSP_INFO).map(([k, v]) => [keyOf(k), v]));
 // แถวที่ SEC ไม่มีข้อมูล ให้เลือกเองจาก dropdown ในตาราง (จำไว้ในเบราว์เซอร์ + ติดไปกับลิงก์)
@@ -1313,21 +1313,22 @@ function swapNames(doc, oldName, newName) {
   for (const t of tsOf(doc)) if (t.textContent.includes(oldName)) t.textContent = t.textContent.split(oldName).join(newName);
 }
 // "ข้อมูล ณ เดือน ต.ค. 69" → เดือนของข้อมูลล่าสุด (เดือน/ปีอาจแยกเป็นหลาย run)
-// "ข้อมูล … ณ เดือน ต.ค. 69" / "ณ วันที่ 23 ต.ค. 69" → "ณ วันที่ <วันที่ของข้อมูล>" (ข้อความอาจแยกเป็นหลาย run)
-function swapAsOf(doc, iso) {
-  const d = +iso.slice(8), mon = TH_MON[+iso.slice(5, 7) - 1], yy = String((+iso.slice(0, 4) + 543) % 100).padStart(2, "0");
+// "ข้อมูล … ณ เดือน ต.ค. 69" (หรือ "ณ วันที่ …") → "ณ เดือน <เดือนที่ทำรายงาน>" (ข้อความอาจแยกเป็นหลาย run)
+const todayIso = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
+function swapAsOf(doc, iso = todayIso()) {
+  const mon = TH_MON[+iso.slice(5, 7) - 1], yy = String((+iso.slice(0, 4) + 543) % 100).padStart(2, "0");
   const ts = tsOf(doc), M = "(?:ม\\.ค\\.|ก\\.พ\\.|มี\\.ค\\.|เม\\.ย\\.|พ\\.ค\\.|มิ\\.ย\\.|ก\\.ค\\.|ส\\.ค\\.|ก\\.ย\\.|ต\\.ค\\.|พ\\.ย\\.|ธ\\.ค\\.)";
   const whole = new RegExp(`ณ\\s*(?:เดือน|วันที่)\\s*(?:\\d{1,2}\\s*)?${M}\\s*\\d{2}`);
   for (let i = 0; i < ts.length; i++) {
     const t = ts[i].textContent;
-    if (whole.test(t)) { ts[i].textContent = t.replace(whole, `ณ วันที่ ${d} ${mon} ${yy}`); continue; }
+    if (whole.test(t)) { ts[i].textContent = t.replace(whole, `ณ เดือน ${mon} ${yy}`); continue; }
     if (!/ณ\s*(เดือน|วันที่)\s*$/.test(t)) continue;
     // แยก run: "ณ เดือน " + "ต.ค." + " 69" (หรือ "ต.ค. 69")
     let k = i + 1, rest = ""; const used = [];
     while (k < ts.length && used.length < 4 && !new RegExp(`^(?:\\d{1,2}\\s*)?${M}\\s*\\d{2}`).test(rest.trim())) { rest += ts[k].textContent; used.push(ts[k]); k++; }
     const mm = rest.match(new RegExp(`^(\\s*)(?:\\d{1,2}\\s*)?${M}\\s*\\d{2}(.*)$`, "s")); if (!mm) continue;
-    ts[i].textContent = t.replace(/เดือน(\s*)$/, "วันที่$1");
-    used[0].textContent = `${mm[1]}${d} ${mon} ${yy}${mm[2]}`; used.slice(1).forEach(x => x.textContent = "");
+    ts[i].textContent = t.replace(/วันที่(\s*)$/, "เดือน$1");
+    used[0].textContent = `${mm[1]}${mon} ${yy}${mm[2]}`; used.slice(1).forEach(x => x.textContent = "");
   }
 }
 // ตั้งข้อความในช่องตาราง: ใช้รูปแบบของ run แรก ลบ run/บรรทัดที่เหลือ
@@ -1377,7 +1378,7 @@ async function buildPptx(file) {
   const oldNames = fillTable(docs[3], m);
   if (oldNames == null) throw new Error("ไม่พบตารางในสไลด์ที่ 4 ของแม่แบบ");
   [0, 1, 3].forEach(i => swapNames(docs[i], oldNames, names));
-  [2, 3].forEach(i => swapAsOf(docs[i], startInfo().e));
+  [2, 3].forEach(i => swapAsOf(docs[i]));
   const stamp = Date.now().toString(36);
   await swapPicture(zip, paths[1], docs[1], exportCanvas(3), "compare_line_" + stamp);
   await swapPicture(zip, paths[2], docs[2], exportBars(3), "compare_bar_" + stamp);
@@ -1433,7 +1434,7 @@ async function buildSpPptx(file) {
   const c = spCharts(), stamp = Date.now().toString(36);
   await chartToPicture(zip, paths[4], bar, c.bar, "sp_bar_" + stamp);
   await swapPicture(zip, paths[5], line, c.line, "sp_line_" + stamp);
-  swapAsOf(bar, c.ytdEnd); swapAsOf(line, c.ytdEnd);
+  swapAsOf(bar); swapAsOf(line);
   zip.file(paths[4], strOf(bar)); zip.file(paths[5], strOf(line));
   await saveZip(zip, "จัดพอร์ตกองทุนรวมตราสารหนี้ระยะสั้นอัตโนมัติ FIXEDSP.pptx");
 }
