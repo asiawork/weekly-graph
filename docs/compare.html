@@ -204,6 +204,15 @@
   .notice ul { margin: 4px 0 0; padding-left: 18px; }
   footer { color: var(--muted); font-size: 12px; padding: 28px 0 40px; }
 
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: grid; place-items: center; z-index: 60; padding: 16px; }
+  .modal-bg[hidden] { display: none; }
+  .modal { background: #fff; border-radius: 14px; max-width: 460px; width: 100%; padding: 20px 22px; box-shadow: 0 20px 50px rgba(15,23,42,.25); }
+  .modal h2 { margin: 0 0 4px; font-size: 18px; color: var(--navy); }
+  .modal p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+  .modal ul { margin: 0 0 16px; padding-left: 20px; line-height: 1.7; }
+  .modal li a { color: var(--navy); cursor: pointer; text-decoration: underline; }
+  .modal-act { display: flex; justify-content: flex-end; gap: 8px; }
+  .flash { outline: 3px solid #f59e0b !important; outline-offset: 2px; border-radius: 6px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
            background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: .2s; pointer-events: none; z-index: 5; }
   .toast.show { opacity: 1; transform: translateX(-50%); }
@@ -348,6 +357,14 @@
 </main>
 
 <div class="toast" id="toast"></div>
+<div class="modal-bg" id="warnBg" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="warnTitle">
+    <h2 id="warnTitle">ยังไม่ได้ใส่ข้อมูลบางส่วน</h2>
+    <p>ช่องเหล่านี้จะว่างในไฟล์ PowerPoint</p>
+    <ul id="warnList"></ul>
+    <div class="modal-act"><button class="btn ghost" id="warnBack">กลับไปใส่</button><button class="btn primary" id="warnGo">ดาวน์โหลดเลย</button></div>
+  </div>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -1352,8 +1369,37 @@ async function buildPptx(file) {
   a.download = `Review Portfolio กองทุนตราสารหนี้ ${names.replace(/ \/ /g, ", ")}.pptx`.replace(/[\\/:*?"<>|]+/g, "-"); a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+// ก่อนดาวน์โหลด: เตือนถ้ายังไม่ใส่ค่าเฉลี่ยกลุ่ม YTD / Credit Rating / ระยะเวลาถือ
+function missingInputs() {
+  const out = [], m = modelT1(), am = annualModel();
+  if ($("showPeer").checked && am && am.ytd && peerYtd() == null)
+    out.push({ text: `ค่าเฉลี่ยกลุ่ม Short Term General Bond (YTD ${am.years.at(-1)})`, el: () => $("peerYtd") });
+  for (const label of Object.keys(PICK)) {
+    const row = m.rows.find(([l]) => l === label); if (!row) continue;
+    const miss = m.cols.filter((c, i) => !isFxCol(c) && !row[1][i]).map(c => c.name);
+    if (miss.length) out.push({ text: `${label}: ${miss.join(", ")}`, el: () => document.querySelector(`#t1 select.pick[data-l="${CSS.escape(label)}"][data-n="${CSS.escape(miss[0])}"]`) });
+  }
+  return out;
+}
+function flash(el) { if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("flash"); setTimeout(() => { el.focus({ preventScroll: true }); }, 350); setTimeout(() => el.classList.remove("flash"), 2500); }
+function warnMissing(items) {
+  return new Promise((ok) => {
+    const bg = $("warnBg"), list = $("warnList");
+    list.innerHTML = items.map((it, i) => `<li><a data-i="${i}">${esc(it.text)}</a></li>`).join("");
+    bg.hidden = false; $("warnGo").focus();
+    const done = (go, target) => { bg.hidden = true; document.removeEventListener("keydown", key); ok(go); if (target) flash(target); };
+    const key = (e) => { if (e.key === "Escape") done(false); };
+    document.addEventListener("keydown", key);
+    $("warnGo").onclick = () => done(true);
+    $("warnBack").onclick = () => done(false, items[0].el());
+    bg.onclick = (e) => { if (e.target === bg) done(false); };
+    list.onclick = (e) => { const a = e.target.closest("a[data-i]"); if (a) done(false, items[+a.dataset.i].el()); };
+  });
+}
 async function runPptx() {
   if (!selected.length) { toast("เลือกกองที่จะเทียบก่อน"); return; }
+  const miss = missingInputs();
+  if (miss.length && !(await warnMissing(miss))) return;
   const b = $("pptx"), sp = b.querySelector("span"), lbl = sp.textContent; b.disabled = true; sp.textContent = "กำลังสร้าง…";
   try {
     if (!PPTX_TPL) { const r = await fetch("compare/template.pptx?v=" + Date.now()); if (!r.ok) throw new Error("ไม่พบไฟล์แม่แบบ"); PPTX_TPL = await r.blob(); }
