@@ -1436,7 +1436,7 @@ async function buildSpPptx(file) {
   await swapPicture(zip, paths[5], line, c.line, "sp_line_" + stamp);
   swapAsOf(bar); swapAsOf(line);
   zip.file(paths[4], strOf(bar)); zip.file(paths[5], strOf(line));
-  await saveZip(zip, "จัดพอร์ตกองทุนรวมตราสารหนี้ระยะสั้นอัตโนมัติ FIXEDSP.pptx");
+  await saveZip(zip, "FIXEDSP_จัดพอร์ตกองทุนรวมตราสารหนี้ระยะสั้นอัตโนมัติ.pptx");
 }
 // ก่อนดาวน์โหลด: เตือนถ้ายังไม่ใส่ค่าเฉลี่ยกลุ่ม YTD / Credit Rating / ระยะเวลาถือ
 function missingInputs() {
