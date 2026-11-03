@@ -267,6 +267,7 @@
         <p class="note-sm">หมายเหตุ: ข้อมูลอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหรือปิดหน้า</p>
       </div>
       </div>
+      <button class="hdrbtn" id="pptx" title="Review Portfolio: ปก · กราฟเส้น · กราฟแท่ง · ตาราง · รายละเอียด FIXEDSP"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ดาวน์โหลด PowerPoint</span></button>
       <div class="asof" id="asof">กำลังโหลด…</div>
     </div>
   </div>
@@ -300,9 +301,6 @@
           <div class="actions">
             <button class="btn primary" id="copy">Copy รูป</button>
             <button class="btn ghost" id="download">ดาวน์โหลด PNG</button>
-            <button class="btn ghost" id="print">ดาวน์โหลดรายงาน (PDF)</button>
-            <button class="btn ghost" id="pptx" title="ใช้ไฟล์ Review Portfolio (.pptx) เดือนก่อนเป็นแม่แบบ">ดาวน์โหลด PowerPoint</button>
-            <input type="file" id="pptxTpl" accept=".pptx" hidden>
           </div>
         </div>
         <div class="range" id="rangeBox">
@@ -348,12 +346,6 @@
 
   <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · ข้อมูล FIXEDSP ที่ใส่ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหน้า</footer>
 </main>
-
-<div id="report">
-  <div class="page"><img id="rImg" alt=""><div class="foot" id="rFoot1"></div></div>
-  <div class="page"><img id="rBarImg" alt=""><div class="foot" id="rFootB"></div></div>
-  <div class="page"><h2>เทียบกับ FIXEDSP</h2><img id="rTblImg" alt=""><div class="foot" id="rFoot2"></div></div>
-</div>
 
 <div class="toast" id="toast"></div>
 
@@ -1246,9 +1238,9 @@ $("download").onclick = async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(await toBlob(exportCanvas(2))); a.download = fileName("png"); a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 };
-/* ---------- PowerPoint: ใช้ไฟล์ Review Portfolio เดิมเป็นแม่แบบ ----------
+/* ---------- PowerPoint: ใช้ docs/compare/template.pptx (ไฟล์ Review Portfolio ของทีม) เป็นแม่แบบ ----------
    สไลด์ 1 ปก (ชื่อกอง) · 2 กราฟเส้น · 3 กราฟแท่ง · 4 ตารางเทียบ · ที่เหลือคงไว้ตามแม่แบบ
-   แม่แบบอยู่ในหน้านี้ระหว่างใช้งานเท่านั้น ไม่เก็บไว้ที่ไหน */
+   อยากเปลี่ยนหน้าตา/สไลด์ 5 เป็นต้นไป: อัปโหลดไฟล์ใหม่ทับ template.pptx บน GitHub */
 let PPTX_TPL = null;
 const loadJSZip = () => window.JSZip ? Promise.resolve(window.JSZip) : new Promise((ok, no) => {
   const sc = document.createElement("script");
@@ -1361,26 +1353,16 @@ async function buildPptx(file) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 async function runPptx() {
-  if (!PPTX_TPL) { toast("เลือกไฟล์แม่แบบ .pptx (ไฟล์ Review Portfolio เดือนก่อนใช้ได้เลย)", 4000); $("pptxTpl").click(); return; }
-  const b = $("pptx"), lbl = b.textContent; b.disabled = true; b.textContent = "กำลังสร้าง…";
-  try { await buildPptx(PPTX_TPL); toast("ดาวน์โหลด PowerPoint แล้ว"); }
+  if (!selected.length) { toast("เลือกกองที่จะเทียบก่อน"); return; }
+  const b = $("pptx"), sp = b.querySelector("span"), lbl = sp.textContent; b.disabled = true; sp.textContent = "กำลังสร้าง…";
+  try {
+    if (!PPTX_TPL) { const r = await fetch("compare/template.pptx?v=" + Date.now()); if (!r.ok) throw new Error("ไม่พบไฟล์แม่แบบ"); PPTX_TPL = await r.blob(); }
+    await buildPptx(PPTX_TPL); toast("ดาวน์โหลด PowerPoint แล้ว");
+  }
   catch (e) { console.error(e); toast("สร้าง PowerPoint ไม่ได้: " + e.message, 5000); }
-  finally { b.disabled = false; b.textContent = lbl; }
+  finally { b.disabled = false; sp.textContent = lbl; }
 }
 $("pptx").onclick = runPptx;
-$("pptxTpl").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) { PPTX_TPL = f; runPptx(); } };
-$("print").onclick = () => {
-  if (!selected.length) return;
-  // หน้า 1 = กราฟ · หน้า 2 = ตารางเทียบ FIXEDSP (รูปเดียวกับปุ่ม Copy เป็นรูป)
-  $("rImg").src = exportCanvas(3).toDataURL("image/png");
-  $("rTblImg").src = tableCanvas(modelT1(), 3).toDataURL("image/png");
-  $("rBarImg").src = exportBars(3).toDataURL("image/png");
-  $("rFoot1").textContent = $("rFoot2").textContent = `ข้อมูล ณ วันที่ ${thDate(startInfo().e)}`;
-  const am = annualModel(); $("rFootB").textContent = am ? `ข้อมูล ณ วันที่ ${thDate(am.ytdEnd)}` : "";
-  const old = document.title; document.title = fileName("pdf").replace(/\.pdf$/, "");
-  Promise.all(["rImg", "rBarImg", "rTblImg"].map(id => $(id).decode().catch(() => {})))
-    .then(() => setTimeout(() => { window.print(); document.title = old; }, 50));
-};
 $("copyT1").onclick = () => copyModel(modelT1());
 $("copyBar").onclick = async () => {
   try { await navigator.clipboard.write([new ClipboardItem({ "image/png": toBlob(exportBars(2)) })]); toast("Copy กราฟแท่งแล้ว ไปวางใน PowerPoint ได้เลย"); }
@@ -1447,7 +1429,7 @@ function update() {
   syncRangeUI();
   const any = selected.some(n => byName(n));
   $("chartBox").hidden = !any; $("empty").hidden = any;
-  ["copy", "download", "print", "pptx"].forEach(id => $(id).disabled = !any);
+  ["copy", "download", "pptx"].forEach(id => $(id).disabled = !any);
   const si = startInfo();
   const notes = [];
   if (si.late) notes.push(`เริ่มนับ ${thDate(si.s)} เพราะ ${si.late.name} มีข้อมูลตั้งแต่วันนั้น`);
