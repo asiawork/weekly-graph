@@ -36,7 +36,11 @@
   header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
   header a { color: #fff; opacity: .85; font-size: 13px; }
   header .asof { background: rgba(255,255,255,.12); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
-  .hdr-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .hdr-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; max-width: 620px; }
+  .dlbox { flex-basis: 100%; display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  .dlhead { color: #fff; font-family: var(--font-head); font-weight: 700; font-size: 15px; }
+  .dlbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hdrbtn small { font-family: var(--font-text); font-weight: 400; font-size: 12px; opacity: .8; }
   .fx-wrap { position: relative; }
   .hdrbtn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-head); font-weight: 700; font-size: 14px;
             background: #fff; color: var(--navy); border: 0; border-radius: 9px; padding: 8px 14px; cursor: pointer; }
@@ -276,8 +280,14 @@
         <p class="note-sm">หมายเหตุ: ข้อมูลอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหรือปิดหน้า</p>
       </div>
       </div>
-      <button class="hdrbtn" id="pptx" title="Review Portfolio: ปก · กราฟเส้น · กราฟแท่ง · ตาราง · รายละเอียด FIXEDSP"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ดาวน์โหลด PowerPoint</span></button>
       <div class="asof" id="asof">กำลังโหลด…</div>
+      <div class="dlbox">
+        <div class="dlhead">ดาวน์โหลด PowerPoint</div>
+        <div class="dlbtns">
+          <button class="hdrbtn" id="pptx" title="Review Portfolio: ปก · กราฟเส้น · กราฟแท่ง · ตารางเทียบ · รายละเอียด FIXEDSP"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ver. เปรียบเทียบ</span></button>
+          <button class="hdrbtn" id="pptxSp" title="FIXEDSP อย่างเดียว: รายละเอียดพอร์ต · ผลตอบแทนรายปี · กราฟ 3 ปี"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ver. SP Only <small>(สำหรับลูกค้า Bank)</small></span></button>
+        </div>
+      </div>
     </div>
   </div>
   <nav class="wrap tabs" aria-label="หน้า"><a href="index.html">Top Funds Weekly Charts</a><a href="compare.html" aria-current="page">เปรียบเทียบ FIXEDSP</a></nav>
@@ -1000,8 +1010,8 @@ function renderPerf() {
 /* ---------- ตารางเทียบกองที่เลือกกับ FIXEDSP ----------
    ช่องที่ SEC ไม่มีข้อมูลเว้นว่างไว้ */
 
-const keyOf = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
-const ROWS_T1 = ["บลจ.", "นโยบายค่าเงิน", "สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน", "อายุเฉลี่ยของตราสาร", "อัตราผลตอบแทนที่คาดหวัง 1 ปี",
+const keyOf = (s) => String(s || "").replace(/[\s*]+/g, "").toUpperCase();   // ไม่สนช่องว่างและดอกจัน
+const ROWS_T1 = ["บลจ.", "นโยบายค่าเงิน", "สัดส่วนประเภทการลงทุน\nทั้งภาครัฐและเอกชน", "อายุเฉลี่ยของตราสาร", "อัตราผลตอบแทนที่คาดหวัง 1 ปี*",
   "Average Credit Rating", "ระยะเวลาที่ควรถือลงทุน", "ค่าธรรมเนียมขาย (Front-End Fee)", "ค่าธรรมเนียมการจัดการ + อื่น ๆ",
   "ระยะเวลารับเงินค่าขายคืน", "ทีมผู้เชี่ยวชาญดูแล"];
 const COUNTRY = { "1": "เน้นลงทุนต่างประเทศ", "2": "ลงทุนในต่างประเทศบางส่วน", "3": "ลงทุนในประเทศเท่านั้น", "4": "ลงทุนได้ทั้งในและต่างประเทศ" };
@@ -1092,25 +1102,28 @@ function secCell(f, label) {
 const FIXEDSP_INFO = {
   "บลจ.": "BLS",
   "นโยบายค่าเงิน": "ป้องกันทั้งหมด/เกือบทั้งหมด",
-  "สัดส่วนประเภทการลงทุนทั้งภาครัฐและเอกชน": "สามารถลงทุนได้ทั้งตราสารภาครัฐ และเอกชน",
-  "อายุเฉลี่ยของตราสาร": "2 เดือน",
-  "อัตราผลตอบแทนที่คาดหวัง 1 ปี": "1.0-1.1%",
+  "สัดส่วนประเภทการลงทุนทั้งภาครัฐและเอกชน": "สามารถลงทุนได้ทั้งตราสารภาครัฐ และเอกชนคุณภาพดี",
+  "อายุเฉลี่ยของตราสาร": "3 เดือน",
+  "อัตราผลตอบแทนที่คาดหวัง 1 ปี": "1.0% +/-",
   "Average Credit Rating": "AA",
-  "ระยะเวลาที่ควรถือลงทุน": "ตั้งแต่ 1 สัปดาห์ขึ้นไป",
+  "ระยะเวลาที่ควรถือลงทุน": "แนะนำประมาณ 1 เดือนขึ้นไป",
   "ค่าธรรมเนียมขาย (Front-End Fee)": "ปัจจุบันไม่เรียกเก็บ",
-  "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "0.24%",
-  "ระยะเวลารับเงินค่าขายคืน": "T+2*",
-  "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตให้ตามสถานการณ์ มีคนดูแล",
+  "ค่าธรรมเนียมการจัดการ + อื่น ๆ": "0.22%",
+  "ระยะเวลารับเงินค่าขายคืน": "T+2**",
+  "ทีมผู้เชี่ยวชาญดูแล": "ปรับพอร์ตอัตโนมัติตามสถานการณ์ มีทีมผู้เชี่ยวชาญดูแล",
 };
 const FIXEDSP_MAP = Object.fromEntries(Object.entries(FIXEDSP_INFO).map(([k, v]) => [keyOf(k), v]));
 // แถวที่ SEC ไม่มีข้อมูล ให้เลือกเองจาก dropdown ในตาราง (จำไว้ในเบราว์เซอร์ + ติดไปกับลิงก์)
 const PICK = {
   "Average Credit Rating": ["AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-", "ต่ำกว่า BBB-"],
-  "ระยะเวลาที่ควรถือลงทุน": ["ตั้งแต่ 1 วันขึ้นไป", "ตั้งแต่ 1 สัปดาห์ขึ้นไป", "ตั้งแต่ 1 เดือนขึ้นไป", "ตั้งแต่ 3 เดือนขึ้นไป", "ตั้งแต่ 6 เดือนขึ้นไป", "ตั้งแต่ 1 ปีขึ้นไป"],
+  "ระยะเวลาที่ควรถือลงทุน": ["แนะนำประมาณ 1 สัปดาห์ขึ้นไป", "แนะนำประมาณ 1 เดือนขึ้นไป", "แนะนำประมาณ 3 เดือนขึ้นไป", "แนะนำประมาณ 6 เดือนขึ้นไป", "แนะนำประมาณ 1 ปีขึ้นไป"],
 };
 const MANUAL_STORE = "compare-manual";
 let MANUAL = {};
 try { MANUAL = JSON.parse(localStorage.getItem(MANUAL_STORE) || "{}") || {}; } catch (e) { MANUAL = {}; }
+// ค่าที่เลือกไว้แบบเดิม "ตั้งแต่ … ขึ้นไป" → "แนะนำประมาณ … ขึ้นไป"
+const migrateHold = (v) => typeof v === "string" ? v.replace(/^ตั้งแต่\s*(.+?)\s*ขึ้นไป$/, (_, x) => `แนะนำประมาณ ${x.replace(/\s+/g, " ")}ขึ้นไป`).replace("ประมาณ 1 วันขึ้นไป", "ประมาณ 1 สัปดาห์ขึ้นไป") : v;
+for (const o of Object.values(MANUAL)) if (o && o["ระยะเวลาที่ควรถือลงทุน"]) o["ระยะเวลาที่ควรถือลงทุน"] = migrateHold(o["ระยะเวลาที่ควรถือลงทุน"]);
 const saveManual = () => { try { localStorage.setItem(MANUAL_STORE, JSON.stringify(MANUAL)); } catch (e) {} };
 const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyOf(label)] || "")
   : (PICK[label] && MANUAL[name]?.[label]) || secCell(f, label);
@@ -1300,15 +1313,21 @@ function swapNames(doc, oldName, newName) {
   for (const t of tsOf(doc)) if (t.textContent.includes(oldName)) t.textContent = t.textContent.split(oldName).join(newName);
 }
 // "ข้อมูล ณ เดือน ต.ค. 69" → เดือนของข้อมูลล่าสุด (เดือน/ปีอาจแยกเป็นหลาย run)
-function swapMonth(doc, mon, yy) {
-  const ts = tsOf(doc), MON = /(ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.)/;
+// "ข้อมูล … ณ เดือน ต.ค. 69" / "ณ วันที่ 23 ต.ค. 69" → "ณ วันที่ <วันที่ของข้อมูล>" (ข้อความอาจแยกเป็นหลาย run)
+function swapAsOf(doc, iso) {
+  const d = +iso.slice(8), mon = TH_MON[+iso.slice(5, 7) - 1], yy = String((+iso.slice(0, 4) + 543) % 100).padStart(2, "0");
+  const ts = tsOf(doc), M = "(?:ม\\.ค\\.|ก\\.พ\\.|มี\\.ค\\.|เม\\.ย\\.|พ\\.ค\\.|มิ\\.ย\\.|ก\\.ค\\.|ส\\.ค\\.|ก\\.ย\\.|ต\\.ค\\.|พ\\.ย\\.|ธ\\.ค\\.)";
+  const whole = new RegExp(`ณ\\s*(?:เดือน|วันที่)\\s*(?:\\d{1,2}\\s*)?${M}\\s*\\d{2}`);
   for (let i = 0; i < ts.length; i++) {
     const t = ts[i].textContent;
-    if (/ณ\s*เดือน\s*\S/.test(t)) { ts[i].textContent = t.replace(new RegExp(`(ณ\\s*เดือน\\s*)${MON.source}\\s*\\d{2}`), `$1${mon} ${yy}`); continue; }
-    if (!/ณ\s*เดือน\s*$/.test(t)) continue;
-    const a = ts[i + 1], b = ts[i + 2];
-    if (a && MON.test(a.textContent) && /\d{2}/.test(a.textContent)) a.textContent = a.textContent.replace(new RegExp(`${MON.source}\\s*\\d{2}`), `${mon} ${yy}`);
-    else if (a && MON.test(a.textContent)) { a.textContent = a.textContent.replace(MON, mon); if (b && /^\s*\d{2}\s*$/.test(b.textContent)) b.textContent = " " + yy; }
+    if (whole.test(t)) { ts[i].textContent = t.replace(whole, `ณ วันที่ ${d} ${mon} ${yy}`); continue; }
+    if (!/ณ\s*(เดือน|วันที่)\s*$/.test(t)) continue;
+    // แยก run: "ณ เดือน " + "ต.ค." + " 69" (หรือ "ต.ค. 69")
+    let k = i + 1, rest = ""; const used = [];
+    while (k < ts.length && used.length < 4 && !new RegExp(`^(?:\\d{1,2}\\s*)?${M}\\s*\\d{2}`).test(rest.trim())) { rest += ts[k].textContent; used.push(ts[k]); k++; }
+    const mm = rest.match(new RegExp(`^(\\s*)(?:\\d{1,2}\\s*)?${M}\\s*\\d{2}(.*)$`, "s")); if (!mm) continue;
+    ts[i].textContent = t.replace(/เดือน(\s*)$/, "วันที่$1");
+    used[0].textContent = `${mm[1]}${d} ${mon} ${yy}${mm[2]}`; used.slice(1).forEach(x => x.textContent = "");
   }
 }
 // ตั้งข้อความในช่องตาราง: ใช้รูปแบบของ run แรก ลบ run/บรรทัดที่เหลือ
@@ -1357,17 +1376,66 @@ async function buildPptx(file) {
   const m = modelT1(), names = m.cols.filter(c => !isFxCol(c)).map(c => c.name).join(" / ");
   const oldNames = fillTable(docs[3], m);
   if (oldNames == null) throw new Error("ไม่พบตารางในสไลด์ที่ 4 ของแม่แบบ");
-  const end = startInfo().e, mon = TH_MON[+end.slice(5, 7) - 1], yy = String((+end.slice(0, 4) + 543) % 100).padStart(2, "0");
   [0, 1, 3].forEach(i => swapNames(docs[i], oldNames, names));
-  [2, 3].forEach(i => swapMonth(docs[i], mon, yy));
+  [2, 3].forEach(i => swapAsOf(docs[i], startInfo().e));
   const stamp = Date.now().toString(36);
   await swapPicture(zip, paths[1], docs[1], exportCanvas(3), "compare_line_" + stamp);
   await swapPicture(zip, paths[2], docs[2], exportBars(3), "compare_bar_" + stamp);
   docs.forEach((d, i) => zip.file(paths[i], strOf(d)));
+  await saveZip(zip, `Review Portfolio กองทุนตราสารหนี้ ${names.replace(/ \/ /g, ", ")}.pptx`);
+}
+async function saveZip(zip, name) {
   const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation", compression: "DEFLATE" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-  a.download = `Review Portfolio กองทุนตราสารหนี้ ${names.replace(/ \/ /g, ", ")}.pptx`.replace(/[\\/:*?"<>|]+/g, "-"); a.click();
+  a.download = name.replace(/[\\/:*?"<>|]+/g, "-"); a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+/* ---------- Ver. SP Only (สำหรับลูกค้า Bank): template_sp.pptx ----------
+   สไลด์ 5 = กราฟแท่งรายปี FIXEDSP + ค่าเฉลี่ยกลุ่ม (แทนกราฟ PowerPoint เดิมด้วยรูป) · สไลด์ 6 = กราฟเส้น FIXEDSP ย้อนหลัง 3 ปี
+   สไลด์อื่นคงไว้ตามแม่แบบ */
+const heroSeries = () => allSeries().find(isHero);
+// วาดกราฟของ FIXEDSP อย่างเดียว ช่วง 3 ปี โดยไม่แตะสิ่งที่เลือกไว้บนหน้า
+function spCharts() {
+  const hero = heroSeries(), keep = { selected, range: { ...range }, title: $("title").value };
+  try {
+    selected = [hero.name]; applyQuick("3Y", true);
+    $("title").value = LANG === "en" ? "Cumulative Return" : "ผลตอบแทนสะสม";
+    return { line: exportCanvas(3), bar: exportBars(3), ytdEnd: annualModel()?.ytdEnd || hero.d.at(-1) };
+  } finally { selected = keep.selected; range = keep.range; $("title").value = keep.title; }
+}
+// แทนกราฟ PowerPoint (chart) ตัวแรกในสไลด์ด้วยรูป ในกรอบเดิม (คงสัดส่วนรูป)
+async function chartToPicture(zip, path, doc, canvas, name) {
+  const NS_C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+  const gf = [...doc.getElementsByTagNameNS(NS_P, "graphicFrame")].find(g => g.getElementsByTagNameNS(NS_C, "chart").length);
+  if (!gf) return swapPicture(zip, path, doc, canvas, name);
+  const xf = gf.getElementsByTagNameNS(NS_P, "xfrm")[0], off = xf.getElementsByTagNameNS(NS_A, "off")[0], ext = xf.getElementsByTagNameNS(NS_A, "ext")[0];
+  let x = +off.getAttribute("x"), y = +off.getAttribute("y"), cx = +ext.getAttribute("cx"), cy = +ext.getAttribute("cy");
+  const h = Math.round(cx * canvas.height / canvas.width);
+  if (h <= cy) { y += Math.round((cy - h) / 2); cy = h; } else { const w = Math.round(cy * canvas.width / canvas.height); x += Math.round((cx - w) / 2); cx = w; }
+  zip.file(`ppt/media/${name}.png`, await toBlob(canvas));
+  const relPath = path.replace(/slides\/(slide\d+\.xml)$/, "slides/_rels/$1.rels");
+  const rels = xmlOf(await zip.file(relPath).async("string")), root = rels.documentElement;
+  const rid = "rIdCmp" + name.replace(/\W/g, "");
+  const rel = rels.createElementNS(NS_PR, "Relationship");
+  rel.setAttribute("Id", rid); rel.setAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"); rel.setAttribute("Target", `../media/${name}.png`);
+  root.appendChild(rel); zip.file(relPath, strOf(rels));
+  const ids = [...doc.getElementsByTagNameNS(NS_P, "cNvPr")].map(e => +e.getAttribute("id") || 0);
+  const pic = xmlOf(`<p:pic xmlns:p="${NS_P}" xmlns:a="${NS_A}" xmlns:r="${NS_R}"><p:nvPicPr><p:cNvPr id="${Math.max(0, ...ids) + 1}" name="FIXEDSP yearly returns"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>` +
+    `<p:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`).documentElement;
+  gf.parentNode.replaceChild(doc.importNode(pic, true), gf);
+}
+async function buildSpPptx(file) {
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const paths = await slidePaths(zip);
+  if (paths.length < 6) throw new Error("แม่แบบ SP ต้องมีสไลด์กราฟแท่งเป็นสไลด์ที่ 5 และกราฟเส้นเป็นสไลด์ที่ 6");
+  const [bar, line] = await Promise.all([4, 5].map(async i => xmlOf(await zip.file(paths[i]).async("string"))));
+  const c = spCharts(), stamp = Date.now().toString(36);
+  await chartToPicture(zip, paths[4], bar, c.bar, "sp_bar_" + stamp);
+  await swapPicture(zip, paths[5], line, c.line, "sp_line_" + stamp);
+  swapAsOf(bar, c.ytdEnd); swapAsOf(line, c.ytdEnd);
+  zip.file(paths[4], strOf(bar)); zip.file(paths[5], strOf(line));
+  await saveZip(zip, "จัดพอร์ตกองทุนรวมตราสารหนี้ระยะสั้นอัตโนมัติ FIXEDSP.pptx");
 }
 // ก่อนดาวน์โหลด: เตือนถ้ายังไม่ใส่ค่าเฉลี่ยกลุ่ม YTD / Credit Rating / ระยะเวลาถือ
 function missingInputs() {
@@ -1396,19 +1464,35 @@ function warnMissing(items) {
     list.onclick = (e) => { const a = e.target.closest("a[data-i]"); if (a) done(false, items[+a.dataset.i].el()); };
   });
 }
+const TPL = {};
+async function getTpl(name) {
+  if (!TPL[name]) { const r = await fetch(`compare/${name}?v=` + Date.now()); if (!r.ok) throw new Error("ไม่พบไฟล์แม่แบบ " + name); TPL[name] = await r.blob(); }
+  return TPL[name];
+}
+async function busy(btn, fn) {
+  const sp = btn.querySelector("span"), html = sp.innerHTML; btn.disabled = true; sp.textContent = "กำลังสร้าง…";
+  try { await fn(); toast("ดาวน์โหลด PowerPoint แล้ว"); }
+  catch (e) { console.error(e); toast("สร้าง PowerPoint ไม่ได้: " + e.message, 5000); }
+  finally { btn.disabled = false; sp.innerHTML = html; }
+}
 async function runPptx() {
   if (!selected.length) { toast("เลือกกองที่จะเทียบก่อน"); return; }
   const miss = missingInputs();
   if (miss.length && !(await warnMissing(miss))) return;
-  const b = $("pptx"), sp = b.querySelector("span"), lbl = sp.textContent; b.disabled = true; sp.textContent = "กำลังสร้าง…";
-  try {
-    if (!PPTX_TPL) { const r = await fetch("compare/template.pptx?v=" + Date.now()); if (!r.ok) throw new Error("ไม่พบไฟล์แม่แบบ"); PPTX_TPL = await r.blob(); }
-    await buildPptx(PPTX_TPL); toast("ดาวน์โหลด PowerPoint แล้ว");
+  await busy($("pptx"), async () => buildPptx(await getTpl("template.pptx")));
+}
+async function runPptxSp() {
+  const hero = heroSeries();
+  if (!hero) { toast("เพิ่มข้อมูล FIXEDSP ก่อน (ปุ่ม FIXEDSP ด้านบน)", 4000); $("fxOpen").click(); return; }
+  const last = hero.d.at(-1);
+  if ($("showPeer").checked && !last.endsWith("-12-31") && peerYtd() == null) {
+    const ok = await warnMissing([{ text: `ค่าเฉลี่ยกลุ่ม Short Term General Bond (YTD ${last.slice(0, 4)})`, el: () => $("peerYtd") }]);
+    if (!ok) return;
   }
-  catch (e) { console.error(e); toast("สร้าง PowerPoint ไม่ได้: " + e.message, 5000); }
-  finally { b.disabled = false; sp.textContent = lbl; }
+  await busy($("pptxSp"), async () => buildSpPptx(await getTpl("template_sp.pptx")));
 }
 $("pptx").onclick = runPptx;
+$("pptxSp").onclick = runPptxSp;
 $("copyT1").onclick = () => copyModel(modelT1());
 $("copyBar").onclick = async () => {
   try { await navigator.clipboard.write([new ClipboardItem({ "image/png": toBlob(exportBars(2)) })]); toast("Copy กราฟแท่งแล้ว ไปวางใน PowerPoint ได้เลย"); }
@@ -1468,7 +1552,7 @@ function loadHash() {
   if (p.get("np") === "1") { $("showPeer").checked = false; $("peerIn").setAttribute("aria-disabled", true); }
   if (p.get("py") && !isNaN(+p.get("py"))) $("peerYtd").value = p.get("py");
   try { const man = JSON.parse(p.get("m") || "{}"); for (const [n, o] of Object.entries(man)) if (o && typeof o === "object")
-    MANUAL[n] = Object.fromEntries(Object.entries(o).filter(([l, v]) => PICK[l] && typeof v === "string" && v.length < 60)); saveManual(); } catch (e) {}
+    MANUAL[n] = Object.fromEntries(Object.entries(o).filter(([l, v]) => PICK[l] && typeof v === "string" && v.length < 60).map(([l, v]) => [l, migrateHold(v)])); saveManual(); } catch (e) {}
 }
 
 function update() {
