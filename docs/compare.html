@@ -1357,7 +1357,7 @@ async function buildPptx(file) {
   docs.forEach((d, i) => zip.file(paths[i], strOf(d)));
   const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation", compression: "DEFLATE" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-  a.download = `Review Portfolio FIXEDSP กับ ${names.replace(/ \/ /g, ", ")}.pptx`.replace(/[\\/:*?"<>|]+/g, "-"); a.click();
+  a.download = `Review Portfolio กองทุนตราสารหนี้ ${names.replace(/ \/ /g, ", ")}.pptx`.replace(/[\\/:*?"<>|]+/g, "-"); a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 async function runPptx() {
