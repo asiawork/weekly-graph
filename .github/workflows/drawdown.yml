@@ -1,0 +1,49 @@
+name: Drawdown report
+
+# รันเองเมื่อต้องการ (ไม่มีรอบอัตโนมัติ): GitHub → Actions → Drawdown report → Run workflow
+# ได้ drawdown/drawdown_report.xlsx + drawdown/drawdown_summary.csv ใน repo และไฟล์แนบท้ายหน้ารัน
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# ใช้กลุ่มเดียวกับ Weekly charts / Compare data เพื่อไม่ให้ push ชนกัน
+concurrency:
+  group: weekly-charts
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install requests openpyxl
+
+      - name: Build drawdown report from SEC
+        env:
+          SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+        run: python scripts/drawdown_report.py
+
+      - name: Attach report to this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: drawdown-report
+          path: drawdown/
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/drawdown drawdown
+          if ! git diff --staged --quiet; then
+            git commit -m "Drawdown report $(TZ=Asia/Bangkok date '+%Y-%m-%d')"
+            git pull --rebase -X theirs origin main
+            git push
+          fi

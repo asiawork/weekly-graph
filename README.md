@@ -12,6 +12,8 @@
 
 สองแท็บใช้ข้อมูลและ workflow แยกกัน (`Weekly charts` / `Compare data`) แก้หรือรันอันหนึ่งไม่กระทบอีกอัน
 
+นอกจากนี้มี **Drawdown & Recovery Period** ของกองที่กำหนดเอง เป็นไฟล์ Excel ไม่มีหน้าเว็บ (workflow `Drawdown report`) ดู [DRAWDOWN.md](DRAWDOWN.md)
+
 ## ใช้งานทุกสัปดาห์
 
 1. ระบบรันเองทุก **วันจันทร์ 06:15** (เวลาไทย) ดึง NAV ล่าสุดและสร้างกราฟใหม่
