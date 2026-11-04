@@ -372,7 +372,7 @@
     <h2 id="warnTitle">ยังไม่ได้ใส่ข้อมูลบางส่วน</h2>
     <p>ช่องเหล่านี้จะว่างในไฟล์ PowerPoint</p>
     <ul id="warnList"></ul>
-    <div class="modal-act"><button class="btn ghost" id="warnBack">กลับไปใส่</button><button class="btn primary" id="warnGo">ดาวน์โหลดเลย</button></div>
+    <div class="modal-act"><button class="btn ghost" id="warnGo">ดาวน์โหลดเลย</button><button class="btn primary" id="warnBack">กลับไปใส่</button></div>
   </div>
 </div>
 
@@ -1467,7 +1467,7 @@ function warnMissing(items) {
   return new Promise((ok) => {
     const bg = $("warnBg"), list = $("warnList");
     list.innerHTML = items.map((it, i) => `<li><a data-i="${i}">${esc(it.text)}</a></li>`).join("");
-    bg.hidden = false; $("warnGo").focus();
+    bg.hidden = false; $("warnBack").focus();
     const done = (go, target) => { bg.hidden = true; document.removeEventListener("keydown", key); ok(go); if (target) flash(target); };
     const key = (e) => { if (e.key === "Escape") done(false); };
     document.addEventListener("keydown", key);
