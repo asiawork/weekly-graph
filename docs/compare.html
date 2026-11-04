@@ -166,6 +166,7 @@
   .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; color: var(--ink); }
   .chk input { accent-color: var(--navy); width: 15px; height: 15px; margin: 0; }
   .barcard { margin-top: 16px; }
+  .peerlbl { color: var(--ink); }
   .peerbox { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13.5px; }
   .peerin { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
   .peerin input { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; }
@@ -342,7 +343,7 @@
         <div class="head">
           <div><h3 class="cardtitle">ผลตอบแทนรายปี</h3>
             <div class="peerbox">
-              <label class="chk"><input type="checkbox" id="showPeer" checked> แสดงค่าเฉลี่ยกลุ่ม Short Term General Bond</label>
+              <span class="peerlbl">ค่าเฉลี่ยกลุ่ม Short Term General Bond</span><input type="checkbox" id="showPeer" checked hidden>
               <span class="peerin" id="peerIn">YTD <span id="peerYear">2026</span>
                 <input type="number" id="peerYtd" step="0.01" placeholder="เช่น 0.73" aria-label="ค่าเฉลี่ยกลุ่ม YTD (%)"> %</span>
             </div></div>
@@ -1545,7 +1546,6 @@ function saveHash() {
   const cs = selected.filter(n => COLORS[n]).map(n => n + ":" + COLORS[n].slice(1));
   if (cs.length) p.set("c", cs.join("|"));
   if (!$("align").checked) p.set("a", "0");
-  if (!$("showPeer").checked) p.set("np", "1");
   if (peerYtd() != null) p.set("py", peerYtd());
   const man = {}; for (const n of selected) if (MANUAL[n]) man[n] = MANUAL[n];
   if (Object.keys(man).length) p.set("m", JSON.stringify(man));
@@ -1562,7 +1562,6 @@ function loadHash() {
   if (p.get("l")) setLang(p.get("l"));
   for (const kv of (p.get("c") || "").split("|")) { const i = kv.lastIndexOf(":"); if (i > 0 && /^[0-9a-f]{6}$/i.test(kv.slice(i + 1))) COLORS[kv.slice(0, i)] = "#" + kv.slice(i + 1); }
   if (p.get("a") === "0") $("align").checked = false;
-  if (p.get("np") === "1") { $("showPeer").checked = false; $("peerIn").setAttribute("aria-disabled", true); }
   if (p.get("py") && !isNaN(+p.get("py"))) $("peerYtd").value = p.get("py");
   try { const man = JSON.parse(p.get("m") || "{}"); for (const [n, o] of Object.entries(man)) if (o && typeof o === "object")
     MANUAL[n] = Object.fromEntries(Object.entries(o).filter(([l, v]) => PICK[l] && typeof v === "string" && v.length < 60).map(([l, v]) => [l, migrateHold(v)])); saveManual(); } catch (e) {}
