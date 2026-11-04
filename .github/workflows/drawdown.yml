@@ -26,7 +26,7 @@ jobs:
       - name: Install
         run: pip install requests openpyxl
 
-      - name: Build drawdown report from SEC
+      - name: Build drawdown report from SEC factsheet
         env:
           SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
         run: python scripts/drawdown_report.py
@@ -41,7 +41,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/drawdown drawdown
+          git add drawdown
           if ! git diff --staged --quiet; then
             git commit -m "Drawdown report $(TZ=Asia/Bangkok date '+%Y-%m-%d')"
             git pull --rebase -X theirs origin main

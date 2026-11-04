@@ -12,7 +12,7 @@
 
 สองแท็บใช้ข้อมูลและ workflow แยกกัน (`Weekly charts` / `Compare data`) แก้หรือรันอันหนึ่งไม่กระทบอีกอัน
 
-นอกจากนี้มี **Drawdown & Recovery Period** ของกองที่กำหนดเอง เป็นไฟล์ Excel ไม่มีหน้าเว็บ (workflow `Drawdown report`) ดู [DRAWDOWN.md](DRAWDOWN.md)
+นอกจากนี้มี **Maximum Drawdown & Recovering Period** ของกองที่กำหนดเอง (ค่าจาก factsheet) เป็นไฟล์ Excel ไม่มีหน้าเว็บ (workflow `Drawdown report`) ดู [DRAWDOWN.md](DRAWDOWN.md)
 
 ## ใช้งานทุกสัปดาห์
 
