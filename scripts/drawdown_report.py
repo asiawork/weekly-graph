@@ -1,6 +1,7 @@
 """
 ตาราง Maximum Drawdown และ Recovering Period ของกองที่กำหนดใน drawdown_funds.csv (ไม่มีหน้าเว็บ)
 ใช้ค่าที่ บลจ. รายงานใน factsheet ผ่าน SEC Open API (/v2/fund/factsheet/statistics) — ไม่ดึง NAV
+ถ้า API ส่ง Recovering Period มาว่าง อ่านจาก PDF factsheet ฉบับล่าสุด (/v2/fund/factsheet/urls) แทน
 
 แยกจากกราฟ weekly และหน้าเปรียบเทียบทั้งหมด: ไม่แตะ funds.csv, data/ หรือ docs/
 
@@ -70,6 +71,75 @@ def load_stats():
     return out
 
 
+URLS_URL = f"{fn.BASE}/factsheet/urls"
+THAI_MARKS = re.compile("[\u0e31\u0e34-\u0e3a\u0e47-\u0e4e\u0e40-\u0e44]")   # สระ/วรรณยุกต์ (PDF ไทยมักเรียงสลับ)
+REC_VAL = re.compile(r"(\d+)\s*([ก-๙]+)")
+NONE_VAL = re.compile(r"^\s*(N/?A|-|–|ไม่มี)", re.I)
+
+
+def load_urls():
+    """proj_id -> {class(norm) -> (ลิงก์ PDF factsheet ล่าสุด, as_of_date)}"""
+    out, cursor = {}, None
+    while True:
+        params = {"page_size": "100"}
+        if cursor:
+            params["next_cursor"] = cursor
+        r = fn.get(URLS_URL, params)
+        if r.status_code != 200:
+            print(f"  ! factsheet urls HTTP {r.status_code}")
+            break
+        rows, cursor = fn.extract_list(r.json())
+        for row in rows:
+            link = row.get("pdf_factsheet") or row.get("amc_url_factsheet")
+            if not link:
+                continue
+            slot = out.setdefault(row.get("proj_id"), {})
+            k = cls_key(row.get("fund_class_name"))
+            d = str(row.get("as_of_date") or "")
+            if k not in slot or d >= slot[k][1]:
+                slot[k] = (link, d)
+        if not rows or not cursor:
+            break
+    print(f"  factsheet urls ได้ {len(out)} กอง")
+    return out
+
+
+def unit_of(word):
+    w = THAI_MARKS.sub("", word)
+    if "ป" in w:
+        return "ปี"
+    if "ด" in w:
+        return "เดือน"
+    if "ว" in w:
+        return "วัน"
+    return None
+
+
+def rec_from_pdf(link):
+    """อ่าน Recovering Period จาก PDF factsheet คืน (ค่า, ข้อความดิบ)"""
+    import io
+    import pdfplumber
+    import requests
+    r = requests.get(link, timeout=60, headers={"User-Agent": "weekly-graph drawdown report"})
+    r.raise_for_status()
+    with pdfplumber.open(io.BytesIO(r.content)) as pdf:
+        for page in pdf.pages[:6]:
+            txt = page.extract_text() or ""
+            m = re.search(r"Recover\w*\s*Period\s*(.{0,40})", txt, re.I)
+            if not m:
+                continue
+            raw = m.group(1).split("\n")[0].strip()
+            if NONE_VAL.match(raw):
+                return "N/A", raw
+            parts = []
+            for nmb, word in REC_VAL.findall(raw):
+                u = unit_of(word)
+                if u and u not in [p.split()[1] for p in parts]:
+                    parts.append(f"{int(nmb)} {u}")
+            return (" ".join(parts) or None), raw
+    return None, ""
+
+
 def pick(row, pat):
     for k, v in row.items():
         if pat.search(k) and v not in (None, ""):
@@ -102,7 +172,7 @@ def main():
     by_class, by_abbr = fn.build_lookup(fn.load_profiles())
     stats = load_stats()
 
-    rows, raw, missing, shown = [], [], {}, False
+    rows, raw, missing, shown, need_pdf = [], [], {}, False, []
     for n in names:
         res = fn.resolve(n, by_class, by_abbr)
         if res is None:
@@ -127,11 +197,35 @@ def main():
             missing[n] = "factsheet ไม่มีค่า Maximum Drawdown / Recovering Period"
         rows.append([n, res.get("proj_name_th") or "", res.get("comp_name_th") or "",
                      num(dd) if dd is not None else "", rec if rec is not None else "",
-                     thdate(row.get("start_date"))])
+                     "factsheet (SEC API)" if rec is not None else "", thdate(row.get("start_date")), ""])
+        need_pdf.append((len(rows) - 1, res))
         raw.append((n, row))
         print(f"  {n}: drawdown={dd} ({dk}) · recovering={rec} ({rk})")
 
-    head = ["กองทุน", "ชื่อกอง", "บลจ.", "Maximum Drawdown (%)", "Recovering Period", "factsheet ณ"]
+    # SEC API บางกองส่ง recovering_period มาว่าง ทั้งที่ใน PDF factsheet มีค่า → อ่านจาก PDF แทน
+    urls = load_urls()
+    for i, res in need_pdf:
+        slot = urls.get(res["proj_id"], {})
+        hit = slot.get(cls_key(res["fund_class_name"])) or slot.get("") or (next(iter(slot.values())) if len(slot) == 1 else None)
+        if not hit:
+            continue
+        rows[i][7] = hit[0]
+        if rows[i][4] != "":
+            continue
+        n = rows[i][0]
+        try:
+            val, rawtxt = rec_from_pdf(hit[0])
+            print(f"  PDF {n}: {val!r} (ข้อความ: {rawtxt!r})")
+            if val:
+                rows[i][4], rows[i][5] = val, f"PDF factsheet ณ {thdate(hit[1])}"
+            else:
+                rows[i][5] = "ไม่พบใน PDF (เปิดลิงก์เช็ค)"
+        except Exception as e:  # noqa: BLE001
+            print(f"  ! PDF {n}: {e}")
+            rows[i][5] = "อ่าน PDF ไม่ได้ (เปิดลิงก์เช็ค)"
+
+    head = ["กองทุน", "ชื่อกอง", "บลจ.", "Maximum Drawdown (%)", "Recovering Period", "ที่มา Recovering Period",
+            "factsheet ณ", "ลิงก์ factsheet"]
     OUT.mkdir(parents=True, exist_ok=True)
     with (OUT / "drawdown_summary.csv").open("w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
@@ -158,7 +252,10 @@ def main():
             for c, v in enumerate(vals, 1):
                 x = ws.cell(r, c, v)
                 x.font, x.border = bfont, border
-                x.alignment = Alignment(horizontal="left" if c <= 3 else "center", vertical="center")
+                x.alignment = Alignment(horizontal="left" if c <= 3 or (isinstance(v, str) and v.startswith("http")) else "center", vertical="center")
+                if isinstance(v, str) and v.startswith("http"):
+                    x.hyperlink = v
+                    x.font = Font(name="BLS Text", size=11, color="24467D", underline="single")
                 if isinstance(v, float):
                     x.number_format = "0.00"
                     if v < 0:
@@ -170,7 +267,7 @@ def main():
 
     src = f"ข้อมูลจาก factsheet ฉบับล่าสุด (SEC Open API สำนักงาน ก.ล.ต.) · ทำเมื่อ {today.strftime('%d/%m/%Y')}"
     wb = Workbook()
-    sheet(wb.active, "Maximum Drawdown และ Recovering Period", src, head, rows, [16, 44, 26, 16, 20, 13])
+    sheet(wb.active, "Maximum Drawdown และ Recovering Period", src, head, rows, [16, 44, 26, 16, 20, 26, 13, 50])
     wb.active.title = "สรุป"
 
     keys = []

@@ -24,7 +24,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install
-        run: pip install requests openpyxl
+        run: pip install requests openpyxl pdfplumber
 
       - name: Build drawdown report from SEC factsheet
         env:

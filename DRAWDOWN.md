@@ -21,9 +21,11 @@ GitHub → แท็บ **Actions** → **Drawdown report** → **Run workflow**
 
 | ชีต | มีอะไร |
 |---|---|
-| สรุป | กองทุน · ชื่อกอง · บลจ. · Maximum Drawdown (%) · Recovering Period · factsheet ณ |
+| สรุป | กองทุน · ชื่อกอง · บลจ. · Maximum Drawdown (%) · Recovering Period · ที่มา Recovering Period · factsheet ณ · ลิงก์ factsheet |
 | ข้อมูลดิบ factsheet | ค่าสถิติทั้งหมดที่ factsheet ให้มา (เผื่ออยากได้ค่าอื่น เช่น Sharpe, Beta) |
 | ต้องเช็ค | กองที่หาไม่เจอ / ไม่มีข้อมูล |
+
+SEC API บางกองส่ง Recovering Period มาว่าง ทั้งที่ใน PDF factsheet มีค่า กองแบบนี้ระบบเปิด PDF factsheet ฉบับล่าสุดแล้วอ่านค่าให้ (คอลัมน์ "ที่มา" บอกว่าได้จาก API หรือ PDF) ถ้าอ่านไม่ได้จะบอกให้เปิดลิงก์เช็คเอง
 
 ค่าแสดงตามที่ บลจ. รายงาน (ช่วงเวลาที่ใช้คำนวณขึ้นกับแต่ละ บลจ. ตามแบบ factsheet ของ ก.ล.ต.)
 
