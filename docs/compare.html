@@ -563,13 +563,13 @@ function hl(name, qn) {                         // ไฮไลต์ส่ว�
   const a = map[at], b = map[at + qn.length - 1] + 1, chars = [...name];
   return esc(chars.slice(0, a).join("")) + "<mark>" + esc(chars.slice(a, b).join("")) + "</mark>" + esc(chars.slice(b).join(""));
 }
-function optItem(f, qn, idx) {
+function optItem(f, qn, idx, pinned) {
   const on = selected.includes(f.name);
   const meta = qn && !f.custom && f.risk ? `ความเสี่ยง ${f.risk}` : "";
   return `<label class="opt" ${idx != null ? `data-i="${idx}"` : ""} title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
     (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) +
     `<span class="nm">${hl(f.name, qn)}${ipoTag(f)}${meta ? `<span class="meta">${esc(meta)}</span>` : ""}</span>` +
-    `</label>`;   // ไม่มีปุ่มลบข้อมูล: เอาออกจากกราฟด้วยการเอาติ๊กออก (ข้อมูลหายเองเมื่อรีเฟรช)
+    (pinned ? `<button class="x" data-unsel="${esc(f.name)}" title="เอาออกจากที่เลือก">×</button>` : "") + `</label>`;   // × = เอาออกจากที่เลือก (ไม่ลบข้อมูล)
 }
 let hits = [], activeIdx = -1;
 function searchScore(f, qn) {
@@ -584,7 +584,7 @@ function renderList() {
   const raw = $("q").value, qn = qnorm(raw);
   $("qClear").hidden = !raw;
   const sel = selected.map(byName).filter(Boolean);
-  let html = sel.length ? `<div class="pinned"><div class="sec-title">ที่เลือกอยู่ <span>${sel.length}</span></div>${sel.map(f => optItem(f, qn)).join("")}</div>` : "";
+  let html = sel.length ? `<div class="pinned"><div class="sec-title">ที่เลือกอยู่ <span>${sel.length}</span></div>${sel.map(f => optItem(f, qn, null, true)).join("")}</div>` : "";
   if (qn) {
     hits = allSeries().map(f => [searchScore(f, qn), f]).filter(([sc]) => sc > 0)
       .sort((a, b) => b[0] - a[0] || a[1].name.localeCompare(b[1].name)).map(([, f]) => f);
@@ -624,11 +624,10 @@ $("list").addEventListener("change", (e) => {
   renderList(); update();
 });
 $("list").addEventListener("click", (e) => {
-  const n = e.target.dataset.del; if (!n) return;
+  const n = e.target.dataset.unsel; if (!n) return;
   e.preventDefault();
-  CUSTOM = CUSTOM.filter(c => c.name !== n);
   selected = selected.filter(x => x !== n);
-  rebuildDates(); renderList(); update();
+  renderList(); update();
 });
 $("q").addEventListener("input", () => { activeIdx = qnorm($("q").value) ? 0 : -1; renderList(); });
 $("q").addEventListener("keydown", (e) => {
