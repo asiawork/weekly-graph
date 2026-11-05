@@ -569,7 +569,7 @@ function optItem(f, qn, idx) {
   return `<label class="opt" ${idx != null ? `data-i="${idx}"` : ""} title="${esc(f.info?.proj_name_th || f.name)}"><input type="checkbox" data-n="${esc(f.name)}" ${on ? "checked" : ""}>` +
     (on ? `<input type="color" data-c="${esc(f.name)}" value="${colorOf(f.name)}" title="เปลี่ยนสีเส้น">` : `<span class="sw"></span>`) +
     `<span class="nm">${hl(f.name, qn)}${ipoTag(f)}${meta ? `<span class="meta">${esc(meta)}</span>` : ""}</span>` +
-    (f.custom ? `<button class="x" data-del="${esc(f.name)}" title="ลบเส้นนี้">×</button>` : "") + `</label>`;
+    `</label>`;   // ไม่มีปุ่มลบข้อมูล: เอาออกจากกราฟด้วยการเอาติ๊กออก (ข้อมูลหายเองเมื่อรีเฟรช)
 }
 let hits = [], activeIdx = -1;
 function searchScore(f, qn) {
