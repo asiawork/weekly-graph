@@ -35,7 +35,7 @@
   header h1 { margin: 0; font-size: 24px; font-weight: 700; }
   header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
   header a { color: #fff; opacity: .85; font-size: 13px; }
-  header .asof { background: rgba(255,255,255,.12); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+  header .asof { margin-top: 6px; font-size: 12.5px; opacity: .65; }
   .hdr-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; max-width: 620px; }
   .dlbox { flex-basis: 100%; display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
   .dlhead { color: #fff; font-family: var(--font-head); font-weight: 700; font-size: 15px; }
@@ -263,6 +263,7 @@
     <div>
       <h1>เปรียบเทียบ FIXEDSP</h1>
       <p>เทียบผลตอบแทน FIXEDSP กับกองทุนตราสารหนี้</p>
+      <p class="asof" id="asof">กำลังโหลด…</p>
     </div>
     <div class="hdr-right">
       <div class="fx-wrap">
@@ -281,7 +282,6 @@
         <p class="note-sm">หมายเหตุ: ข้อมูลอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหรือปิดหน้า</p>
       </div>
       </div>
-      <div class="asof" id="asof">กำลังโหลด…</div>
       <div class="dlbox">
         <div class="dlhead">ดาวน์โหลด PowerPoint</div>
         <div class="dlbtns">
