@@ -779,8 +779,19 @@ function drawBars(ctx) {
   const foot = "";
   const L = 74, R = 24, T = showTitle ? 80 : 34, legendH = 40, B = 40 + legendH + (foot ? 24 : 0), pw = W - L - R, ph = H - T - B;
   const all = m.rows.flatMap(r => r.vals).filter(v => v != null);
+  // ขนาดแท่ง/ตัวเลข ปรับตามจำนวนกองที่เลือก: กองน้อย = แท่งผอม เว้นระยะระหว่างปีกว้าง · กองเยอะ = กลุ่มแท่งกว้างขึ้น
+  // ตัวเลขบนแท่งใช้ขนาดใหญ่สุดที่ไม่ล้นช่องแท่ง ถ้าเล็กกว่า 11px ยังไม่พอ ให้หมุนตัวเลขตั้งขึ้น
+  const nG = m.years.length, nS = m.rows.length, gw = pw / nG;
+  const frac = nS <= 3 ? 0.52 : Math.min(0.78, 0.52 + (nS - 3) * 0.07);
+  const bw = Math.min(44, (gw * frac) / nS), gap = Math.min(8, Math.max(2, bw * 0.16)), groupW = nS * bw + (nS - 1) * gap, pitch = bw + gap;
+  const widest = all.reduce((a, v) => (v.toFixed(2) + "%").length > a.length ? v.toFixed(2) + "%" : a, "0.00%");
+  let lab = 15, rot = false;
+  for (; lab >= 11; lab--) { ctx.font = `700 ${lab}px ${FONT_B}`; if (ctx.measureText(widest).width <= pitch - 2) break; }
+  if (lab < 11) { rot = true; lab = Math.min(14, Math.max(11, Math.floor(bw * 0.9))); }
+  ctx.font = `700 ${lab}px ${FONT_B}`;
+  const labPx = (rot ? ctx.measureText(widest).width : lab) + 10;   // ที่ว่างเหนือแท่งสูงสุด
   let y0 = Math.min(0, ...all), y1 = Math.max(0, ...all, 0.01);
-  const pad = (y1 - y0) * 0.12; y1 += pad; if (y0 < 0) y0 -= pad;
+  const pad = Math.max((y1 - y0) * 0.12, (y1 - y0) * labPx / Math.max(60, ph - labPx)); y1 += pad; if (y0 < 0) y0 -= pad;
   const step = niceStep(y1 - y0, 6);
   y1 = Math.ceil(y1 / step - 1e-9) * step; y0 = y0 < 0 ? Math.floor(y0 / step + 1e-9) * step : 0;
   const Y = (v) => T + (y1 - v) / (y1 - y0) * ph;
@@ -793,26 +804,30 @@ function drawBars(ctx) {
     ctx.fillStyle = MUTE; ctx.fillText((zero ? 0 : v).toFixed(dp) + "%", L - 10, y);
   }
   // แท่ง: กลุ่มละปี
-  const nG = m.years.length, nS = m.rows.length, gw = pw / nG;
-  // แท่งผอมลง เว้นระยะระหว่างปีมากขึ้น (กลุ่มแท่งกว้างราวครึ่งหนึ่งของช่องปี)
-  const bw = Math.min(44, (gw * 0.52) / nS), gap = Math.min(8, bw * 0.18), groupW = nS * bw + (nS - 1) * gap;
   m.years.forEach((yr, g) => {
     const cx = L + gw * g + gw / 2, x0 = cx - groupW / 2;
     m.rows.forEach((r, i) => {
       const v = r.vals[g]; if (v == null) return;
       const x = x0 + i * (bw + gap), ya = Y(Math.max(v, 0)), yb = Y(Math.min(v, 0));
       ctx.fillStyle = r.color; ctx.fillRect(x, ya, bw, Math.max(1, yb - ya));
-      ctx.font = `700 ${bw + gap >= 46 ? 15 : bw + gap >= 36 ? 13 : 11}px ${FONT_B}`; ctx.fillStyle = "#111827"; ctx.textAlign = "center";
-      ctx.textBaseline = v >= 0 ? "bottom" : "top";
-      ctx.fillText(v.toFixed(2) + "%", x + bw / 2, v >= 0 ? ya - 6 : yb + 6);
+      ctx.font = `700 ${lab}px ${FONT_B}`; ctx.fillStyle = "#111827";
+      if (rot) {
+        ctx.save(); ctx.translate(x + bw / 2, v >= 0 ? ya - 5 : yb + 5); ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = v >= 0 ? "left" : "right"; ctx.textBaseline = "middle"; ctx.fillText(v.toFixed(2) + "%", 0, 0.5); ctx.restore();
+      } else {
+        ctx.textAlign = "center"; ctx.textBaseline = v >= 0 ? "bottom" : "top";
+        ctx.fillText(v.toFixed(2) + "%", x + bw / 2, v >= 0 ? ya - 6 : yb + 6);
+      }
     });
     ctx.font = `700 16px ${FONT_B}`; ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(yr === m.years.at(-1) && m.ytd ? `${yr} (YTD)` : String(yr), cx, T + ph + 12);
   });
   // legend ด้านล่าง (สี่เหลี่ยมสี + ชื่อ)
-  ctx.font = `600 16px ${FONT}`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  const items = m.rows.map(r => ({ r, w: 14 + 8 + ctx.measureText(r.name).width + 28 }));
-  let x = W / 2 - (items.reduce((a, b) => a + b.w, 0) - 28) / 2; const ly = H - 22 - (foot ? 24 : 0);
+  // ย่อตัวอักษร legend ถ้าเลือกกองเยอะจนยาวเกินความกว้างกราฟ
+  let lf = 16, items, sp = 28;
+  for (; lf >= 11; lf--) { ctx.font = `600 ${lf}px ${FONT}`; sp = lf >= 14 ? 28 : 18; items = m.rows.map(r => ({ r, w: 14 + 8 + ctx.measureText(r.name).width + sp })); if (items.reduce((a, b) => a + b.w, 0) - sp <= W - 32) break; }
+  ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  let x = W / 2 - (items.reduce((a, b) => a + b.w, 0) - sp) / 2; const ly = H - 22 - (foot ? 24 : 0);
   for (const it of items) { ctx.fillStyle = it.r.color; ctx.fillRect(x, ly - 7, 14, 14); ctx.fillStyle = INK; ctx.fillText(it.r.name, x + 22, ly + 0.5); x += it.w; }
   if (foot) { ctx.font = `13px ${FONT}`; ctx.fillStyle = "#8a929e"; ctx.textAlign = "right"; ctx.fillText(foot, W - 24, H - 14); }
   ctx.restore();
