@@ -1619,7 +1619,8 @@ function update() {
       if (f.s) { let t = t0; d.push(f.s); for (const k of f.dd || []) { t += k; d.push(isoOf(t)); } }
       f.d = d; delete f.dd;
     }
-    $("asof").textContent = `NAV ถึง ${thDate(DATA.nav_to || DATA.updated)} · ` + (DATA.start ? `ตั้งแต่ ${DATA.start.slice(0, 4) === "2021" ? "ม.ค. 65" : thDate(DATA.start)}` : `ย้อนหลัง ${DATA.years} ปี`);
+    const from = DATA.start ? (DATA.start.slice(0, 4) === "2021" ? "ม.ค. 65" : thDate(DATA.start)) : null;
+    $("asof").textContent = `NAV กองทุนรายกอง ${from ? `ตั้งแต่ ${from} – ` : "ถึง "}${thDate(DATA.nav_to || DATA.updated)}`;
   } catch (e) {
     $("asof").textContent = "ยังไม่มีข้อมูล";
     $("notice").hidden = false;
