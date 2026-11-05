@@ -266,13 +266,13 @@
     </div>
     <div class="hdr-right">
       <div class="fx-wrap">
-        <button class="hdrbtn" id="fxOpen" aria-expanded="false" aria-controls="fxPop"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="fxLabel">เพิ่มข้อมูล FIXEDSP</span></button>
+        <button class="hdrbtn" id="fxOpen" aria-expanded="false" aria-controls="fxPop"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="fxLabel">อัปโหลดข้อมูล Auto Top Funds</span></button>
       <div class="upload pop" id="fxPop" hidden>
-        <h2>เพิ่มข้อมูล FIXEDSP</h2>
-        <p>หน้าเว็บนี้เปิดเป็น Public จึงไม่ได้เก็บข้อมูล FIXEDSP ไว้ ดาวน์โหลดไฟล์จาก Tableau แล้วนำมาใส่ที่นี่</p>
+        <h2>อัปโหลดข้อมูล Auto Top Funds</h2>
+        <p>หน้าเว็บนี้เปิดเป็น Public จึงไม่ได้เก็บข้อมูลโมเดล Auto Top Funds ไว้ ดาวน์โหลดไฟล์จาก Tableau แล้วนำมาใส่ที่นี่</p>
         <ol class="steps">
           <li>เปิด <a href="https://tableau.sawasdee.brk1/#/views/All_model_performance/ModelPerformance?:iid=1" target="_blank" rel="noopener">Tableau · Model Performance</a></li>
-          <li>เลือกโมเดล <b>FIXEDSP</b></li>
+          <li>เลือกโมเดลที่ต้องการ: <b>FIXEDSP</b> อย่างเดียว, FIXEDSP กับโมเดลอื่นที่จะเปรียบเทียบ หรือเลือกทุกโมเดล</li>
           <li>กด <span class="kbd"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 12.5v3h13v-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="caret" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5z" fill="currentColor"/></svg></span> (Download) → <b>Data</b></li>
           <li>กดปุ่มด้านล่าง แล้วเลือกไฟล์ที่ดาวน์โหลดมา</li>
         </ol>
@@ -364,7 +364,7 @@
     </section>
   </div>
 
-  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · ข้อมูล FIXEDSP ที่ใส่ไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหน้า</footer>
+  <footer>ข้อมูล NAV และข้อมูลกองทุนจาก SEC Open API (สำนักงาน ก.ล.ต.) · ผลตอบแทนคำนวณจาก NAV ต่อหน่วย ไม่รวมค่าธรรมเนียมซื้อขาย ผลการดำเนินงานในอดีตไม่ได้เป็นสิ่งยืนยันถึงผลการดำเนินงานในอนาคต · ข้อมูล Auto Top Funds ที่อัปโหลดไม่ถูกส่งขึ้นเว็บ และจะหายเมื่อรีเฟรชหน้า</footer>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -420,11 +420,14 @@ const allSeries = () => [...CUSTOM, ...DATA.funds];
 const byName = (n) => allSeries().find(f => f.name === n);
 const isIPO = (f) => String(f?.sec?.fund_status || "").toUpperCase() === "IPO";
 const ipoTag = (f) => isIPO(f) ? `<span class="tag" title="กองทุนเปิดขายครั้งแรก (IPO) ยังไม่มี NAV ย้อนหลัง">IPO</span>` : "";
-const isHero = (f) => !!f && (f.custom || /FIXEDSP/i.test(f.name));
+const isHero = (f) => !!f && /^FIXEDSP$/i.test(f.name);   // FIXEDSP = เส้นหลัก (ฟ้า หนา) · โมเดลอื่นได้สีตามลำดับเหมือนกองทั่วไป
+const ATF_GROUP = "Auto Top Funds";
+const ATF_ORDER = ["FIXEDSP", "FIXEDTDP", "FIXEDDP", "CAA", "MAA", "AAA", "DAA", "TCT"];
+const atfRank = (n) => { const i = ATF_ORDER.indexOf(String(n).toUpperCase()); return i < 0 ? 99 : i; };
 const colorOf = (n) => {
   if (COLORS[n]) return COLORS[n];
-  if (isHero(byName(n)) || /FIXEDSP/i.test(n)) return HERO_COLOR;
-  const others = selected.filter(x => !(isHero(byName(x)) || /FIXEDSP/i.test(x)));
+  if (/^FIXEDSP$/i.test(n)) return HERO_COLOR;
+  const others = selected.filter(x => !/^FIXEDSP$/i.test(x));
   return PALETTE[Math.max(0, others.indexOf(n)) % PALETTE.length];
 };
 const saveColors = () => { try { localStorage.setItem(COLOR_STORE, JSON.stringify(COLORS)); } catch (e) {} };
@@ -530,18 +533,22 @@ async function onCSV(file) {
     for (const p of lines) {
       const name = (p.name || "FIXEDSP").slice(0, 40);
       CUSTOM = CUSTOM.filter(c => c.name !== name);
-      CUSTOM.unshift({ name, group: "FIXEDSP", custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
-      added.push(`${name} (${p.d.length} วัน ถึง ${thDate(p.d.at(-1))})`);
-      selected = [name, ...selected.filter(n => n !== name)].slice(0, MAX_SEL);
+      CUSTOM.push({ name, group: ATF_GROUP, custom: true, d: p.d, v: p.v, info: { proj_name_th: `อัปโหลดจากไฟล์ ${file.name}` }, sec: {} });
+      added.push(name);
     }
+    CUSTOM.sort((a, b) => atfRank(a.name) - atfRank(b.name) || a.name.localeCompare(b.name));
+    // เลือก FIXEDSP ให้อัตโนมัติ (ไม่มี FIXEDSP ในไฟล์ = เลือกโมเดลแรก) โมเดลอื่นติ๊กเพิ่มเองในกลุ่ม Auto Top Funds
+    const pick = CUSTOM.find(isHero) || CUSTOM.find(c => added.includes(c.name));
+    if (pick && !selected.includes(pick.name)) selected = [pick.name, ...selected].slice(0, MAX_SEL);
+    openGroups.add(ATF_GROUP);
     rebuildDates(); renderList(); update();
-    toast(`เพิ่ม ${added.join(", ")}`);
+    toast(added.length > 1 ? `อัปโหลด ${added.length} โมเดล (${CUSTOM.filter(c => added.includes(c.name)).map(c => c.name).join(", ")}) · ติ๊กโมเดลอื่นเพิ่มได้ในกลุ่ม Auto Top Funds` : `อัปโหลด ${added[0]}`, 5000);
     fxStatus(); fxPop(false);
   } catch (e) { toast("อ่านไฟล์ไม่ได้: " + e.message); }
 }
 
 /* ---------- เลือกกอง */
-const openGroups = new Set(["FIXEDSP"]);
+const openGroups = new Set(["Auto Top Funds"]);
 document.addEventListener("toggle", (e) => {
   const g = e.target.dataset?.g; if (g == null) return;
   if (e.target.open) openGroups.add(g); else openGroups.delete(g);
@@ -651,9 +658,9 @@ $("fxOpen").onclick = (e) => { e.stopPropagation(); fxPop($("fxPop").hidden); };
 document.addEventListener("click", (e) => { if (!$("fxPop").hidden && !e.target.closest(".fx-wrap")) fxPop(false); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fxPop(false); });
 function fxStatus() {
-  const f = CUSTOM[0];
+  const f = CUSTOM.find(isHero) || CUSTOM[0];
   $("fxOpen").classList.toggle("has", !!f);
-  $("fxLabel").textContent = f ? `FIXEDSP ถึง ${thDate(f.d.at(-1))}` : "เพิ่มข้อมูล FIXEDSP";
+  $("fxLabel").textContent = f ? `${CUSTOM.length > 1 ? "Auto Top Funds" : f.name} ถึง ${thDate(f.d.at(-1))}` : "อัปโหลดข้อมูล Auto Top Funds";
 }
 $("csvFile").onchange = (e) => { if (e.target.files[0]) onCSV(e.target.files[0]); e.target.value = ""; };
 
@@ -1147,7 +1154,7 @@ const saveManual = () => { try { localStorage.setItem(MANUAL_STORE, JSON.stringi
 const cellFor = (name, f, label) => name === "FIXEDSP" && !f ? (FIXEDSP_MAP[keyOf(label)] || "")
   : (PICK[label] && MANUAL[name]?.[label]) || secCell(f, label);
 function modelT1() {
-  const others = selected.map(byName).filter(f => f && !isHero(f));
+  const others = selected.map(byName).filter(f => f && !f.custom);   // โมเดล Auto Top Funds อื่นยังไม่มีข้อมูลในตาราง
   const cols = [...others.map(f => ({ name: f.name, f })), { name: "FIXEDSP", f: null }];
   return { cols, rows: ROWS_T1.map(l => [l, cols.map(c => cellFor(c.name, c.f, l))]) };
 }
@@ -1512,7 +1519,7 @@ async function runPptx() {
 }
 async function runPptxSp() {
   const hero = heroSeries();
-  if (!hero) { toast("เพิ่มข้อมูล FIXEDSP ก่อน (ปุ่ม FIXEDSP ด้านบน)", 4000); $("fxOpen").click(); return; }
+  if (!hero) { toast("อัปโหลดข้อมูล Auto Top Funds ที่มีโมเดล FIXEDSP ก่อน (ปุ่มด้านบน)", 4000); $("fxOpen").click(); return; }
   const last = hero.d.at(-1);
   if ($("showPeer").checked && !last.endsWith("-12-31") && peerYtd() == null) {
     const ok = await warnMissing([{ text: `ค่าเฉลี่ยกลุ่ม Short Term General Bond (YTD ${last.slice(0, 4)})`, el: () => $("peerYtd") }]);
